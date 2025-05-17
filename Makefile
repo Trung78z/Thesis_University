@@ -12,3 +12,6 @@ exOx:
 
 exRT:
 	python export_tensorRT.py
+
+d:
+	python detect.py
