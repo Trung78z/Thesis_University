@@ -3,15 +3,15 @@ train:
 	make run
 
 run:
-	python train.py
+	python3 train.py
 test:
-	python test.py
+	python3 test.py
 
 exOx:
-	python export_onnx.py
+	python3 export_onnx.py
 
 exRT:
-	python export_tensorRT.py
+	python3 export_tensorRT.py
 
 d:
-	python detect.py
+	python3 detect.py

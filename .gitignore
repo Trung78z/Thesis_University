@@ -1,8 +1,8 @@
 .env/*
 runs/*
-datasets/*
+datasets
 tool/*
-data/*
+data
 yolo11n*
 **/build/*
 **/dist/*
