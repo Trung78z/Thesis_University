@@ -7,6 +7,6 @@ yolo11n*
 **/build/*
 **/dist/*
 .vscode/*
-__pycache__/*
+/__pycache__
 *.png
 *.jpg

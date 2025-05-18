@@ -1,17 +1,15 @@
-train:
-	sudo rm -r runs
-	make run
+d:
+	python prediction/detect.py
 
-run:
-	python3 train.py
-test:
-	python3 test.py
+training:
+	sudo rm -rf runs
+	python train/train.py
 
 exOx:
-	python3 export_onnx.py
+	python train/export_onnx.py
 
 exRT:
-	python3 export_tensorRT.py
+	python train/export_tensorRT.py
 
-d:
-	python3 detect.py
+test:
+	python test.py

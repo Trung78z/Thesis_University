@@ -2,9 +2,9 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 import time
-from LaneDetector import LaneDetector
+from prediction.LaneDetector import LaneDetector
 # Load the TensorRT-optimized model (.engine)
-model = YOLO("runs/detect/train/weights/best.engine")
+model = YOLO("../runs/detect/train/weights/best.engine")
 
 # Open video file or webcam (0 = default webcam)
 video_path = "tool/output.mp4"
