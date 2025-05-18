@@ -4,3 +4,9 @@ datasets/*
 tool/*
 data/*
 yolo11n*
+**/build/*
+**/dist/*
+.vscode/*
+
+*.png
+*.jpg
