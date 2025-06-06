@@ -1,61 +1,96 @@
-cmake_minimum_required(VERSION 3.10.0)
-project(detect VERSION 0.1.0 LANGUAGES C CXX)
+cmake_minimum_required(VERSION 3.18)
+project(detection LANGUAGES CXX CUDA)
 
-# Set CUDA path
-set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda")
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# TensorRT paths
-set(TensorRT_INCLUDE_DIR "/usr/include/x86_64-linux-gnu")
-set(TensorRT_LIB_DIR "/usr/lib/x86_64-linux-gnu")
+# Define CUDA path
+set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda" CACHE PATH "Path to CUDA toolkit")
+find_package(CUDA REQUIRED)
+include_directories(${CUDA_INCLUDE_DIRS})
 
-# Main TensorRT libraries
-set(TensorRT_LIBS
+# Add headers (optional for IDE support)
+set(HEADERS
+    src/Detect.h
+    src/macros.h
+    src/logging.h
+    src/cuda_utils.h
+    src/preprocess.h
+    src/common.h
+)
+
+# Add source files
+set(SOURCES
+    main.cpp
+    src/preprocess.cu
+)
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/Detect.cpp")
+    list(APPEND SOURCES src/Detect.cpp)
+else()
+    message(WARNING "src/Detect.cpp not found. Please check your sources.")
+endif()
+
+# OpenCV
+find_package(OpenCV REQUIRED)
+if(NOT OpenCV_FOUND)
+    message(FATAL_ERROR "OpenCV not found!")
+endif()
+include_directories(${OpenCV_INCLUDE_DIRS})
+
+# TensorRT
+set(TensorRT_INCLUDE_DIR "/usr/include/x86_64-linux-gnu" CACHE PATH "TensorRT include path")
+set(TensorRT_LIB_DIR "/usr/lib/x86_64-linux-gnu" CACHE PATH "TensorRT library path")
+
+# Check header
+if (NOT EXISTS "${TensorRT_INCLUDE_DIR}/NvInfer.h")
+    message(FATAL_ERROR "TensorRT header (NvInfer.h) not found in ${TensorRT_INCLUDE_DIR}")
+endif()
+
+# TensorRT libraries to link
+set(TensorRT_LIB_NAMES
     nvinfer
     nvinfer_plugin
+    nvonnxparser
 )
 
-# Find OpenCV
-find_package(OpenCV REQUIRED)
-
-message(STATUS "TensorRT include dir: ${TensorRT_INCLUDE_DIR}")
-message(STATUS "TensorRT lib dir: ${TensorRT_LIB_DIR}")
-message(STATUS "OpenCV version: ${OpenCV_VERSION}")
-
-file(GLOB SOURCES "src/*.cpp")
-
-add_executable(detect ${SOURCES})
-
-# Include directories
-target_include_directories(detect PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${OpenCV_INCLUDE_DIRS}
-    ${TensorRT_INCLUDE_DIR}
-    ${CUDA_TOOLKIT_ROOT_DIR}/include
-)
-
-# Link libraries
-foreach(lib ${TensorRT_LIBS})
+# Resolve actual library paths
+set(TensorRT_LINK_LIBS "")
+foreach(lib ${TensorRT_LIB_NAMES})
     find_library(${lib}_LIBRARY NAMES ${lib} PATHS ${TensorRT_LIB_DIR})
+    if (NOT ${lib}_LIBRARY)
+        message(FATAL_ERROR "TensorRT library ${lib} not found in ${TensorRT_LIB_DIR}")
+    endif()
     list(APPEND TensorRT_LINK_LIBS ${${lib}_LIBRARY})
 endforeach()
 
-target_link_libraries(detect PRIVATE
+# Include dirs
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${TensorRT_INCLUDE_DIR}
+)
+
+# Create executable
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+
+# Link libraries
+target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBS}
     ${TensorRT_LINK_LIBS}
-    ${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudart.so
+    ${CUDA_LIBRARIES}
+    cudart
     pthread
     dl
 )
 
-# Add CUDA and TensorRT definitions
-target_compile_definitions(detect PRIVATE
-    -DNV_TENSORRT_MAJOR=10
-    -DNV_TENSORRT_MINOR=9
-    -DNV_TENSORRT_PATCH=0
+# Optional: CUDA architecture (adjust based on your GPU)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    CUDA_ARCHITECTURES "60;70;75;80;86"
 )
 
-# Set RPATH to find TensorRT libraries
-set_target_properties(detect PROPERTIES
-    BUILD_RPATH "${TensorRT_LIB_DIR}"
-    INSTALL_RPATH "${TensorRT_LIB_DIR}"
+# Optional: RPATH for runtime
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    BUILD_RPATH "${TensorRT_LIB_DIR};${CUDA_TOOLKIT_ROOT_DIR}/lib64"
+    INSTALL_RPATH "${TensorRT_LIB_DIR};${CUDA_TOOLKIT_ROOT_DIR}/lib64"
 )
