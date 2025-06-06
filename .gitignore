@@ -1,7 +1,8 @@
-.env/*
-runs/*
+.env
+runs
 datasets
-tool/*
+tool/*.mp4
+tool/images
 data
 yolo11n*
 **/build/*
@@ -10,3 +11,4 @@ yolo11n*
 /__pycache__
 *.png
 *.jpg
+P2_Dhaka_Dataset-1

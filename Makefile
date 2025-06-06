@@ -3,13 +3,16 @@ d:
 
 training:
 	sudo rm -rf runs
-	python train/train.py
-
-exOx:
-	python train/export_onnx.py
+	python train_test/train.py
 
 exRT:
-	python train/export_tensorRT.py
+	python train_test/export_tensorRT.py
 
 test:
 	python test.py
+
+read:
+	python tests/read_video.py
+
+check_edge:
+	python prediction/check_edge.py
