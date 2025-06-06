@@ -1,92 +1,93 @@
-#include <opencv2/opencv.hpp>
-#include <opencv2/dnn/dnn.hpp>
-#include "LaneDetector.hpp"
-#include <chrono>
+#include <NvInfer.h>
+#include <cuda_runtime_api.h>
 #include <iostream>
+#include <fstream>
+#include <vector>
+#include <memory>
+
+using namespace nvinfer1;
+
+// Function to read TensorRT engine file (*.engine)
+std::vector<char> readEngineFile(const std::string& filename) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file) {
+        std::cerr << "Error opening engine file: " << filename << std::endl;
+        return {};
+    }
+    file.seekg(0, file.end);
+    size_t size = file.tellg();
+    file.seekg(0, file.beg);
+
+    std::vector<char> buffer(size);
+    file.read(buffer.data(), size);
+    return buffer;
+}
 
 int main() {
-    // Load the YOLO model
-    cv::dnn::Net net = cv::dnn::readNet("runs/detect/train/weights/best.onnx");
-    net.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
-    net.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
+    // Simple logger for TensorRT
+    class Logger : public ILogger {
+        void log(Severity severity, const char* msg) noexcept override {
+            if (severity <= Severity::kWARNING)
+                std::cout << msg << std::endl;
+        }
+    } logger;
 
-    // Open video file
-    std::string video_path = "tool/output.mp4";
-    cv::VideoCapture cap(video_path);
-    if (!cap.isOpened()) {
-        std::cerr << "Error opening video file" << std::endl;
+    // Read pre-built engine file (you need to have the .engine file)
+    std::string engineFile = "car.engine";
+    auto engineData = readEngineFile(engineFile);
+    if (engineData.empty()) {
         return -1;
     }
 
-    // Lane detector configuration
-    LaneDetector::Config video_config;
-    video_config.cannyThresholds = cv::Vec2i(70, 170);
-    video_config.houghThreshold = 50;
-    video_config.minLineLength = 30;
-    video_config.yBottomRatio = 0.95f;
-    video_config.yTopRatio = 0.75f;
-    video_config.slopeThreshold = 0.4f;
-    video_config.x1 = 200;
-    video_config.x2 = 1200;
-    video_config.x3 = 550;
-    video_config.x4 = 680;
-    video_config.y = 400;
-
-    LaneDetector detector(video_config);
-
-    // FPS calculation variables
-    float fps = 0;
-    int frame_count = 0;
-    auto start_time = std::chrono::high_resolution_clock::now();
-
-    while (true) {
-        cv::Mat frame;
-        cap >> frame;
-        if (frame.empty()) break;
-
-        // Resize frame
-        cv::resize(frame, frame, cv::Size(1280, 720));
-
-        // Calculate FPS
-        frame_count++;
-        if (frame_count % 10 == 0) {
-            auto end_time = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-            fps = 10000.0f / duration.count();  // 10 frames / time in seconds
-            start_time = end_time;
-        }
-
-        // Put FPS text on frame
-        cv::putText(frame, "FPS: " + std::to_string(fps), cv::Point(10, 30),
-                   cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255), 2);
-
-        // YOLO detection (simplified - actual YOLOv8 inference would be more complex)
-        // Note: This is a placeholder - you'll need to implement proper YOLOv8 inference
-        cv::Mat blob = cv::dnn::blobFromImage(frame, 1/255.0, cv::Size(640, 640), cv::Scalar(0,0,0), true, false);
-        net.setInput(blob);
-        cv::Mat outputs = net.forward();
-
-        // Process outputs (this part would need to be adapted to your specific YOLO model)
-        // Here you would parse the outputs and draw bounding boxes
-        // For now, we'll just use the original frame as annotated_frame
-        cv::Mat annotated_frame = frame.clone();
-
-        // Lane detection
-        auto processed = detector.processImage(annotated_frame);
-        annotated_frame = processed.first;
-
-        // Show the frame
-        cv::imshow("YOLOv8 Detection", annotated_frame);
-
-        // Press 'q' to quit
-        if (cv::waitKey(1) == 'q') {
-            break;
-        }
+    // Create runtime
+    std::unique_ptr<IRuntime> runtime{createInferRuntime(logger)};
+    if (!runtime) {
+        std::cerr << "Failed to create TensorRT runtime" << std::endl;
+        return -1;
     }
 
-    // Release resources
-    cap.release();
-    cv::destroyAllWindows();
+    // Deserialize engine
+    std::unique_ptr<ICudaEngine> engine{
+        runtime->deserializeCudaEngine(engineData.data(), engineData.size())};
+    if (!engine) {
+        std::cerr << "Failed to deserialize engine" << std::endl;
+        return -1;
+    }
 
+    // Create execution context
+    std::unique_ptr<IExecutionContext> context{engine->createExecutionContext()};
+    if (!context) {
+        std::cerr << "Failed to create execution context" << std::endl;
+        return -1;
+    }
+
+    // Assume model input is 1D float with size = 3, output also size = 3
+    // Prepare input data
+    float inputData[3] = {1.0f, 2.0f, 3.0f};
+    float outputData[3] = {0};
+
+    // Allocate GPU memory for input and output
+    void* buffers[2];
+    cudaMalloc(&buffers[0], sizeof(inputData));
+    cudaMalloc(&buffers[1], sizeof(outputData));
+
+    // Copy input to GPU
+    cudaMemcpy(buffers[0], inputData, sizeof(inputData), cudaMemcpyHostToDevice);
+
+    // Run inference - using enqueueV3 for newer TensorRT versions
+    context->enqueueV3(0);
+
+    // Copy result back to CPU
+    cudaMemcpy(outputData, buffers[1], sizeof(outputData), cudaMemcpyDeviceToHost);
+
+    std::cout << "Output: ";
+    for (float v : outputData) std::cout << v << " ";
+    std::cout << std::endl;
+
+    // Clean up GPU memory
+    cudaFree(buffers[0]);
+    cudaFree(buffers[1]);
+
+    // No need to manually destroy objects - smart pointers handle it
     return 0;
 }
