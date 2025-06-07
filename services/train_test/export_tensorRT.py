@@ -4,4 +4,5 @@ from ultralytics import YOLO
 model = YOLO("runs/detect/detect/weights/best.pt")
 
 # Export to TensorRT engine
-model.export(format="engine")  # Optional: device=0, half=True
+model.export(format="onnx",device=0)  # Optional: device=0, half=True
+model.export(format="engine",device=0)  # Optional: device=0, half=True
