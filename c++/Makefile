@@ -1,5 +1,5 @@
 run:
-	./build/detection car_detect.engine test_video.mp4
+	./build/detection models/car_d.engine test_video.mp4
 clean:
 	rm -rf build
 build:
