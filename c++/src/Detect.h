@@ -37,10 +37,7 @@ public:
     void draw(Mat& image, const vector<Detection>& output);
 
 private:
-    // Initialize the TensorRT engine from a serialized model file
-    void init(std::string engine_path, nvinfer1::ILogger& logger);
-
-    // Device (GPU) buffers for input and output
+     // Device (GPU) buffers for input and output
     float* gpu_buffers[2];  //!< Input and output buffers allocated on the GPU
 
     // Host (CPU) buffer for storing inference output

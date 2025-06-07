@@ -19,20 +19,20 @@ Detect::Detect(string model_path, nvinfer1::ILogger &logger)
     {
         init(model_path, logger);
     }
-
-    // Build an engine from an onnx model
+    // Build an engine from an ONNX model
     else
     {
         build(model_path, logger);
         saveEngine(model_path);
     }
 
-#if NV_TENSORRT_MAJOR < 8
-    // Define input dimensions
+#if NV_TENSORRT_MAJOR < 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR < 5)
+    // For TensorRT < 8.5, use getBindingDimensions
     auto input_dims = engine->getBindingDimensions(0);
     input_h = input_dims.d[2];
     input_w = input_dims.d[3];
 #else
+    // For TensorRT >= 8.5, use getIOTensorName and getTensorShape
     auto input_dims = engine->getTensorShape(engine->getIOTensorName(0));
     input_h = input_dims.d[2];
     input_w = input_dims.d[3];
@@ -50,12 +50,12 @@ void Detect::init(std::string engine_path, nvinfer1::ILogger &logger)
     engineStream.read(engineData.get(), modelSize);
     engineStream.close();
 
-    // Deserialize the tensorrt engine
+    // Deserialize the TensorRT engine
     runtime = createInferRuntime(logger);
     engine = runtime->deserializeCudaEngine(engineData.get(), modelSize);
     context = engine->createExecutionContext();
 
-#if NV_TENSORRT_MAJOR < 8
+#if NV_TENSORRT_MAJOR < 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR < 5)
     input_h = engine->getBindingDimensions(0).d[2];
     input_w = engine->getBindingDimensions(0).d[3];
     detection_attribute_size = engine->getBindingDimensions(1).d[1];
@@ -77,12 +77,9 @@ void Detect::init(std::string engine_path, nvinfer1::ILogger &logger)
     // Initialize input buffers
     cpu_output_buffer = new float[detection_attribute_size * num_detections];
     CUDA_CHECK(cudaMalloc(&gpu_buffers[0], 3 * input_w * input_h * sizeof(float)));
-
-    // Initialize output buffer
     CUDA_CHECK(cudaMalloc(&gpu_buffers[1], detection_attribute_size * num_detections * sizeof(float)));
 
     cuda_preprocess_init(MAX_IMAGE_SIZE);
-
     CUDA_CHECK(cudaStreamCreate(&stream));
 
     if (warmup)
@@ -127,12 +124,8 @@ void Detect::preprocess(Mat &image)
 void Detect::infer()
 {
     // Register the input and output buffers
-#if NV_TENSORRT_MAJOR < 8
-    // Register the input and output buffers by binding index for TensorRT < 8
-    // context->setBindingDimensions(0, engine->getBindingDimensions(0));
-    // context->setBindingDimensions(1, engine->getBindingDimensions(1));
-    // Set the input and output buffer addresses
-    // For TensorRT < 8, use enqueueV2 with gpu_buffers directly, no setTensorAddress
+#if NV_TENSORRT_MAJOR < 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR < 5)
+    // For TensorRT < 8.5, do not use setTensorAddress, just use enqueueV2
 #else
     const char *input_name = engine->getIOTensorName(0);
     const char *output_name = engine->getIOTensorName(1);
