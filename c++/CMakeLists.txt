@@ -1,6 +1,24 @@
 cmake_minimum_required(VERSION 3.10.2)
 project(detection LANGUAGES CXX CUDA)
 
+# Log TensorRT version
+execute_process(
+    COMMAND bash -c "grep '#define NV_TENSORRT_MAJOR' ${TensorRT_INCLUDE_DIR}/NvInferVersion.h | awk '{print $3}'"
+    OUTPUT_VARIABLE TRT_MAJOR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+execute_process(
+    COMMAND bash -c "grep '#define NV_TENSORRT_MINOR' ${TensorRT_INCLUDE_DIR}/NvInferVersion.h | awk '{print $3}'"
+    OUTPUT_VARIABLE TRT_MINOR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+execute_process(
+    COMMAND bash -c "grep '#define NV_TENSORRT_PATCH' ${TensorRT_INCLUDE_DIR}/NvInferVersion.h | awk '{print $3}'"
+    OUTPUT_VARIABLE TRT_PATCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+message(STATUS "TensorRT version detected: ${TRT_MAJOR}.${TRT_MINOR}.${TRT_PATCH}")
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
