@@ -19,20 +19,20 @@ Detect::Detect(string model_path, nvinfer1::ILogger &logger)
     {
         init(model_path, logger);
     }
-
-    // Build an engine from an onnx model
+    // Build an engine from an ONNX model
     else
     {
         build(model_path, logger);
         saveEngine(model_path);
     }
 
-#if NV_TENSORRT_MAJOR < 8
-    // Define input dimensions
+#if NV_TENSORRT_MAJOR < 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR < 5)
+    // For TensorRT < 8.5, use getBindingDimensions
     auto input_dims = engine->getBindingDimensions(0);
     input_h = input_dims.d[2];
     input_w = input_dims.d[3];
 #else
+    // For TensorRT >= 8.5, use getIOTensorName and getTensorShape
     auto input_dims = engine->getTensorShape(engine->getIOTensorName(0));
     input_h = input_dims.d[2];
     input_w = input_dims.d[3];
@@ -50,12 +50,12 @@ void Detect::init(std::string engine_path, nvinfer1::ILogger &logger)
     engineStream.read(engineData.get(), modelSize);
     engineStream.close();
 
-    // Deserialize the tensorrt engine
+    // Deserialize the TensorRT engine
     runtime = createInferRuntime(logger);
     engine = runtime->deserializeCudaEngine(engineData.get(), modelSize);
     context = engine->createExecutionContext();
 
-#if NV_TENSORRT_MAJOR < 8
+#if NV_TENSORRT_MAJOR < 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR < 5)
     input_h = engine->getBindingDimensions(0).d[2];
     input_w = engine->getBindingDimensions(0).d[3];
     detection_attribute_size = engine->getBindingDimensions(1).d[1];
@@ -77,12 +77,9 @@ void Detect::init(std::string engine_path, nvinfer1::ILogger &logger)
     // Initialize input buffers
     cpu_output_buffer = new float[detection_attribute_size * num_detections];
     CUDA_CHECK(cudaMalloc(&gpu_buffers[0], 3 * input_w * input_h * sizeof(float)));
-
-    // Initialize output buffer
     CUDA_CHECK(cudaMalloc(&gpu_buffers[1], detection_attribute_size * num_detections * sizeof(float)));
 
     cuda_preprocess_init(MAX_IMAGE_SIZE);
-
     CUDA_CHECK(cudaStreamCreate(&stream));
 
     if (warmup)
@@ -106,9 +103,15 @@ Detect::~Detect()
 
     // Destroy the engine
     cuda_preprocess_destroy();
+#if NV_TENSORRT_MAJOR < 8
+    context->destroy();
+    engine->destroy();
+    runtime->destroy();
+#else
     delete context;
     delete engine;
     delete runtime;
+#endif
 }
 
 void Detect::preprocess(Mat &image)
@@ -121,12 +124,16 @@ void Detect::preprocess(Mat &image)
 void Detect::infer()
 {
     // Register the input and output buffers
+#if NV_TENSORRT_MAJOR < 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR < 5)
+    // For TensorRT < 8.5, do not use setTensorAddress, just use enqueueV2
+#else
     const char *input_name = engine->getIOTensorName(0);
     const char *output_name = engine->getIOTensorName(1);
 
     // Set the input tensor address
     context->setTensorAddress(input_name, gpu_buffers[0]);
     context->setTensorAddress(output_name, gpu_buffers[1]);
+#endif
 
 #if NV_TENSORRT_MAJOR < 10
     context->enqueueV2((void **)gpu_buffers, stream, nullptr);
@@ -200,7 +207,17 @@ void Detect::build(std::string onnxPath, nvinfer1::ILogger &logger)
 
     nvonnxparser::IParser *parser = nvonnxparser::createParser(*network, logger);
     bool parsed = parser->parseFromFile(onnxPath.c_str(), static_cast<int>(nvinfer1::ILogger::Severity::kINFO));
+#if NV_TENSORRT_MAJOR < 8
+    ICudaEngine *tmp_engine = builder->buildCudaEngine(*network);
+    IHostMemory *plan = nullptr;
+    if (tmp_engine)
+    {
+        plan = tmp_engine->serialize();
+        tmp_engine->destroy();
+    }
+#else
     IHostMemory *plan{builder->buildSerializedNetwork(*network, *config)};
+#endif
 
     runtime = createInferRuntime(logger);
 
@@ -208,10 +225,17 @@ void Detect::build(std::string onnxPath, nvinfer1::ILogger &logger)
 
     context = engine->createExecutionContext();
 
+#if NV_TENSORRT_MAJOR < 8
+    network->destroy();
+    config->destroy();
+    parser->destroy();
+    plan->destroy();
+#else
     delete network;
     delete config;
     delete parser;
     delete plan;
+#endif
 }
 
 bool Detect::saveEngine(const std::string &onnxpath)
@@ -242,7 +266,11 @@ bool Detect::saveEngine(const std::string &onnxpath)
         file.write((const char *)data->data(), data->size());
         file.close();
 
+#if NV_TENSORRT_MAJOR < 8
+        data->destroy();
+#else
         delete data;
+#endif
     }
     return true;
 }
@@ -264,15 +292,15 @@ void Detect::draw(Mat &image, const vector<Detection> &output)
         {
             box.x = box.x / ratio_w;
             box.y = (box.y - (input_h - ratio_w * image.rows) / 2) / ratio_w;
-            box.width = box.width / ratio_w;
-            box.height = box.height / ratio_w;
+            box.width = static_cast<int>(box.width / ratio_w);
+            box.height = static_cast<int>(box.height / ratio_w);
         }
         else
         {
             box.x = (box.x - (input_w - ratio_h * image.cols) / 2) / ratio_h;
             box.y = box.y / ratio_h;
-            box.width = box.width / ratio_h;
-            box.height = box.height / ratio_h;
+            box.width = static_cast<int>(box.width / ratio_h);
+            box.height = static_cast<int>(box.height / ratio_h);
         }
 
         // Clamp box coordinates to image size
@@ -294,8 +322,8 @@ void Detect::draw(Mat &image, const vector<Detection> &output)
         cv::Size textSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.6, 1, &baseLine);
         int top = std::max((int)box.y, textSize.height);
 
-        // Draw label text (black on colored background)
+        // Draw label text (yellow text with black outline)
         putText(image, label, cv::Point(box.x + 2, box.y - 5),
-                FONT_HERSHEY_SIMPLEX, 0.6, Scalar(0, 0, 0), 2);
+                FONT_HERSHEY_SIMPLEX, 0.6, Scalar(0, 255, 255), 2); // Yellow text
     }
 }

@@ -51,6 +51,14 @@ class Logger : public nvinfer1::ILogger
 
 int main(int argc, char **argv)
 {
+    if (argc != 3)
+    {
+        std::cerr << "Usage: " << argv[0] << " <engine_file_path> <image_or_video_path>" << std::endl;
+        return 1;
+    }
+
+    std::cout << "Engine file path: " << argv[1] << std::endl;
+    std::cout << "Input path: " << argv[2] << std::endl;
 
     const string engine_file_path{argv[1]};
     const string path{argv[2]};
@@ -146,7 +154,7 @@ int main(int argc, char **argv)
             cv::imshow("Result", image);
 
             if (cv::waitKey(1) == 'q')
-            { // Nhấn ESC để thoát
+            { // Press ESC to exit
                 break;
             }
         }

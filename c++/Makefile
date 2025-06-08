@@ -1,15 +1,25 @@
-run:
-	./build/detection car_detect.engine test_video.mp4
-clean:
-<<<<<<< Updated upstream
-	rm -rf build
+# Makefile
+
+TARGET = detection
+ENGINE = models/car_d.engine
+INPUT  = test_video.mp4
+BUILD_DIR = build
+
+# Default target
+run: build
+	@echo "Running $(TARGET)..."
+	@$(BUILD_DIR)/$(TARGET) $(ENGINE) $(INPUT) || echo "❌ Program failed"
+
 build:
-	mkdir -p build
-	cd build && cmake .. && make -j$(nproc)
-=======
+	@echo "Building project..."
+	@mkdir -p $(BUILD_DIR)
+	@cd $(BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release .. && make -j$(nproc)
+
+debug:
+	@echo "Building with debug symbols..."
+	@mkdir -p $(BUILD_DIR)
+	@cd $(BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug .. && make -j$(nproc)
+
+clean:
 	@echo "Cleaning build directory..."
 	@rm -rf $(BUILD_DIR)
-
-
-.PHONY: run build debug clean
->>>>>>> Stashed changes
