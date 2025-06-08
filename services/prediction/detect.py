@@ -4,7 +4,7 @@ from AdvancedLaneDetector import AdvancedLaneDetector
 
 
 if __name__ == "__main__":
-    detector = AdvancedLaneDetector(yolo_model_path="runs/detect/train/weights/car.engine",)
+    detector = AdvancedLaneDetector(yolo_model_path="runs/acc_mode/weights/best.pt")
     cap = cv2.VideoCapture("tool/test_video.mp4")
     
     while cap.isOpened():
