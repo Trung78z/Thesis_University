@@ -38,6 +38,7 @@ func sanitizeFilename(filename string) string {
 func main() {
 	id := flag.String("id", "", "YouTube video ID (required)")
 	outputDir := flag.String("o", "./", "Output directory (default is current directory)")
+	quality := flag.String("quality", "best", "Video quality: fullhd (1080p), hd (720p), or best (default: best)")
 	flag.Parse()
 
 	if *id == "" {
@@ -67,17 +68,32 @@ func main() {
 	safeTitle := sanitizeFilename(video.Title)
 	fmt.Printf("Downloading: %s\n", safeTitle)
 
-	// Find the best video-only format (1080p)
+	// Find the best video-only format based on quality flag
+	var targetHeight int
+	switch strings.ToLower(*quality) {
+	case "fullhd":
+		targetHeight = 1080
+	case "hd":
+		targetHeight = 720
+	default:
+		targetHeight = 0 // best available
+	}
+
 	var bestVideoFormat *youtube.Format
 	for _, f := range video.Formats {
-		if strings.Contains(f.MimeType, "video/mp4") && !strings.Contains(f.MimeType, "audio") && f.Height == 1080 {
-			bestVideoFormat = &f
-			break
+		if strings.Contains(f.MimeType, "video/mp4") && !strings.Contains(f.MimeType, "audio") {
+			if targetHeight > 0 && f.Height == targetHeight {
+				bestVideoFormat = &f
+				break
+			}
+			if targetHeight == 0 && (bestVideoFormat == nil || f.Height > bestVideoFormat.Height) {
+				bestVideoFormat = &f
+			}
 		}
 	}
 
-	// Fallback to best video available if 1080p not found
-	if bestVideoFormat == nil {
+	// Fallback to best available if not found
+	if bestVideoFormat == nil && targetHeight > 0 {
 		for _, f := range video.Formats {
 			if strings.Contains(f.MimeType, "video/mp4") && !strings.Contains(f.MimeType, "audio") {
 				if bestVideoFormat == nil || f.Height > bestVideoFormat.Height {

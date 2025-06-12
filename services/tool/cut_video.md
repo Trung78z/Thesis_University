@@ -18,7 +18,7 @@ ffmpeg -ss 00:07:30 -i input1.mp4 -t 00:22:30 -an -vf "scale=1920:1080" -b:v 200
 ffmpeg -ss 00:10:30 -to 00:30:00 -i test_video.mp4 -qscale:v 2 -vf "fps=0.5" images/car_%04d.jpg
 
 
-ffmpeg -i test_video.mp4 -qscale:v 2 -vf "fps=0.5,scale=1280:720" images/car_%04d.jpg
+ffmpeg -i test_video.mp4 -qscale:v 2 -vf "fps=2,scale=1280:720" images/thesis_%04d.jpg
 
 
 

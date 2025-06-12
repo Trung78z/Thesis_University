@@ -1,7 +1,7 @@
 # Makefile
 
 TARGET = detection
-ENGINE = models/car_d.engine
+ENGINE = models/thesis2.engine
 INPUT  = test_video.mp4
 BUILD_DIR = build
 

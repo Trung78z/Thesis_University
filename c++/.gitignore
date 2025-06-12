@@ -1,4 +1,7 @@
 test_video.mp4
 .vscode
 models
-test_video_720p.mp4
+**/*.mp4
+output.mp4
+build
+**/*.zip
