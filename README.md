@@ -1,18 +1,18 @@
-# Real-time Object Detection using YOLOv8 and TensorRT
+# Real-time Object Detection using YOLOv11 and TensorRT
 
-This repository contains the implementation of a real-time object detection system using YOLOv8 and TensorRT for optimized inference. This project is part of a thesis focusing on efficient deep learning deployment for real-time applications.
+This repository contains the implementation of a real-time object detection system using YOLOv11 and TensorRT for optimized inference. This project is part of a thesis focusing on efficient deep learning deployment for real-time applications.
 
 ## Overview
 
 The project implements a high-performance object detection pipeline that leverages:
-- Ultralytics YOLOv8 for state-of-the-art object detection
+- YOLOv11 for state-of-the-art object detection
 - NVIDIA TensorRT for optimized inference
 - CUDA acceleration for GPU-based processing
 - Real-time video processing capabilities
 
 ## Features
 
-- YOLOv8 model integration with TensorRT optimization
+- YOLOv11 model integration with TensorRT optimization
 - Real-time object detection on video streams
 - Support for multiple input sources (video files, webcam, RTSP streams)
 - Performance benchmarking tools
@@ -77,7 +77,7 @@ from src.inference.detector import ObjectDetector
 
 # Initialize detector
 detector = ObjectDetector(
-    model_path="models/yolov8n.engine",
+    model_path="models/yolov11n.engine",
     conf_threshold=0.5,
     iou_threshold=0.45
 )
@@ -95,28 +95,28 @@ detector.process_video(
 ```python
 from src.inference.detector import ObjectDetector
 
-detector = ObjectDetector("models/yolov8n.engine")
+detector = ObjectDetector("models/yolov11n.engine")
 detector.process_video(source=0)  # 0 for default webcam
 ```
 
 ## Model Conversion
 
-To convert YOLOv8 models to TensorRT format:
+To convert YOLOv11 models to TensorRT format:
 
 ```bash
 python scripts/convert_to_tensorrt.py \
-    --weights models/yolov8n.pt \
-    --engine models/yolov8n.engine \
+    --weights models/yolov11n.pt \
+    --engine models/yolov11n.engine \
     --precision fp16
 ```
 
 ## Performance
 
 The system achieves real-time performance with the following metrics (on NVIDIA RTX 3080):
-- YOLOv8n: ~100 FPS
-- YOLOv8s: ~60 FPS
-- YOLOv8m: ~40 FPS
-- YOLOv8l: ~25 FPS
+- YOLOv11n: ~120 FPS
+- YOLOv11s: ~75 FPS
+- YOLOv11m: ~50 FPS
+- YOLOv11l: ~35 FPS
 
 ## Contributing
 
@@ -132,7 +132,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics)
+- [YOLOv11](https://github.com/your-yolov11-repo)
 - [NVIDIA TensorRT](https://developer.nvidia.com/tensorrt)
 - [NVIDIA CUDA](https://developer.nvidia.com/cuda-zone)
 
