@@ -114,14 +114,10 @@ void cuda_preprocess(
 
 
     cudaDeviceSynchronize();
-    // std::cout << "Synchronized CUDA device." << std::endl;
 
-    // Copy data to pinned memory
-    // std::cout << "Copying data to pinned memory..." << std::endl;
     memcpy(img_buffer_host, src, img_size);
 
-    // Copy data to device memory
-    // std::cout << "Copying data to device memory..." << std::endl;
+
     CUDA_CALL(cudaMemcpyAsync(img_buffer_device, img_buffer_host, img_size, cudaMemcpyHostToDevice, stream));
     CUDA_CALL(cudaStreamSynchronize(stream));
 
@@ -143,19 +139,16 @@ void cuda_preprocess(
     int threads = 256;
     int blocks = (jobs + threads - 1) / threads;
 
-    // Launch the kernel
-    // std::cout << "Launching kernel..." << std::endl;
     warpaffine_kernel<<<blocks, threads, 0, stream>>>(
         img_buffer_device, src_width * 3, src_width, src_height,
         dst, dst_width, dst_height, 128, d2s, jobs);
 
     // Synchronize and check for errors
     CUDA_CALL(cudaStreamSynchronize(stream));
-    // std::cout << "Kernel execution completed." << std::endl;
 }
 
 void cuda_preprocess_init(int max_image_size) {
-    // std::cout << "I am in the preprocess init" << std::endl;
+    std::cout << "The preprocess init" << std::endl;
     CUDA_CALL(cudaMallocHost((void**)&img_buffer_host, max_image_size * 3));
     CUDA_CALL(cudaMalloc((void**)&img_buffer_device, max_image_size * 3));
 }
