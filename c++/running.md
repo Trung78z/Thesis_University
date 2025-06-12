@@ -29,3 +29,6 @@ export LD_LIBRARY_PATH=$(CUDA_HOME)/lib64:$(LD_LIBRARY_PATH)
 
 
 scp -r ./models trung@192.168.1.8:~/Desktop/c++ 
+
+
+sudo apt-get install libcanberra-gtk-module libcanberra-gtk3-module
