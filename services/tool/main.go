@@ -180,18 +180,20 @@ func downloadStream(client youtube.Client, video *youtube.Video, format *youtube
 }
 
 func mergeVideoAudio(videoFile, audioFile, outputFile string) error {
-	cmd := exec.Command("ffmpeg",
-		"-i", videoFile,
-		"-i", audioFile,
-		"-c:v", "copy",
-		"-c:a", "copy",
-		"-shortest",
-		outputFile,
-		"-y", // Overwrite without asking
-	)
+    cmd := exec.Command("ffmpeg",
+        "-i", videoFile,
+        "-i", audioFile,
+        "-c:v", "copy",          // Copy video stream
+        "-c:a", "aac",           // Encode audio to AAC (more compatible)
+        "-movflags", "+faststart", // Enable streaming (puts moov atom at start)
+        "-strict", "experimental",
+        "-shortest",
+        outputFile,
+        "-y", // Overwrite without asking
+    )
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+    cmd.Stdout = os.Stdout
+    cmd.Stderr = os.Stderr
 
-	return cmd.Run()
+    return cmd.Run()
 }

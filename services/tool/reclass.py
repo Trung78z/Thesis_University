@@ -2,8 +2,8 @@ import os
 import yaml
 
 # ==== CONFIGURATION ====
-data_yaml_path = 'coco.yaml'  # Path to YAML file
-label_dirs = ['video1/labels']  # YOLO label directories
+data_yaml_path = 'hcmus_thesis_2/data.yaml'  # Path to YAML file
+label_dirs = ['hcmus_thesis_2/train/labels','hcmus_thesis_2/valid/labels']  # YOLO label directories
 
 # ==== STEP 1: Read old_class_order from YAML ====
 with open(data_yaml_path, 'r') as f:

@@ -53,23 +53,21 @@ class YOLOv11VideoProcessor:
 
     def process_video(self, video_path, output_dir, conf_threshold=0.4, target_fps=15, display=True):
         """
-        Process video file, save frames and annotations.
+        Process video file, save unannotated frames and YOLO-format annotations.
         
         Args:
             video_path: Path to input video file
             output_dir: Directory to save outputs
             conf_threshold: Confidence threshold for detections
             target_fps: Target frames per second to process
-            display: Whether to show real-time detection results
+            display: Whether to show real-time detection results with annotations
         """
         # Create output directories
         os.makedirs(output_dir, exist_ok=True)
         images_dir = os.path.join(output_dir, 'images')
         labels_dir = os.path.join(output_dir, 'labels')
-        annotated_dir = os.path.join(output_dir, 'annotated')
         os.makedirs(images_dir, exist_ok=True)
         os.makedirs(labels_dir, exist_ok=True)
-        os.makedirs(annotated_dir, exist_ok=True)
 
         # Open video file
         cap = cv2.VideoCapture(video_path)
@@ -105,7 +103,7 @@ class YOLOv11VideoProcessor:
             # Process frame
             detections = self.process_frame(frame, conf_threshold)
             
-            # Save original frame
+            # Save unannotated frame
             frame_name = f"frame_{processed_count:06d}.jpg"
             cv2.imwrite(os.path.join(images_dir, frame_name), frame)
 
@@ -119,29 +117,26 @@ class YOLOv11VideoProcessor:
                     height = (y2 - y1) / frame_height
                     f.write(f"{det['class_id']} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")
 
-            # Create and save annotated frame
-            annotated_frame = frame.copy()
-            for det in detections:
-                x1, y1, x2, y2 = det['bbox']
-                color = det['color']
-                cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-                
-                # Create label text
-                label = f"{det['class_name']} {det['confidence']:.2f}"
-                (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-                
-                # Draw label background
-                cv2.rectangle(annotated_frame, (x1, y1 - text_height - 10), 
-                            (x1 + text_width, y1), color, -1)
-                
-                # Put text
-                cv2.putText(annotated_frame, label, (x1, y1 - 5), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-
-            cv2.imwrite(os.path.join(annotated_dir, frame_name), annotated_frame)
-
-            # Display results
+            # Create annotated frame for display only
             if display:
+                annotated_frame = frame.copy()
+                for det in detections:
+                    x1, y1, x2, y2 = det['bbox']
+                    color = det['color']
+                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
+                    
+                    # Create label text
+                    label = f"{det['class_name']} {det['confidence']:.2f}"
+                    (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                    
+                    # Draw label background
+                    cv2.rectangle(annotated_frame, (x1, y1 - text_height - 10), 
+                                (x1 + text_width, y1), color, -1)
+                    
+                    # Put text
+                    cv2.putText(annotated_frame, label, (x1, y1 - 5), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
                 cv2.imshow('YOLOv11 Detection', annotated_frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -160,14 +155,14 @@ if __name__ == "__main__":
     processor = YOLOv11VideoProcessor(model_path='yolo11x.engine')
     
     # Configuration
-    video_path = 'test_video.mp4'  # Replace with your video path
-    output_directory = 'video1'  # Output will be saved here
+    video_path = 'video/test_video.mp4'  # Replace with your video path
+    output_directory = 'dataset'  # Output will be saved here
     
     # Process video
     processor.process_video(
         video_path=video_path,
         output_dir=output_directory,
-        conf_threshold=0.4,
-        target_fps=15,
+        conf_threshold=0.5,
+        target_fps=4,
         display=True
     )

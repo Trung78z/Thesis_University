@@ -1,0 +1,2 @@
+remap:
+	python reclass.py

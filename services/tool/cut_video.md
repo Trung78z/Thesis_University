@@ -20,16 +20,13 @@ ffmpeg -ss 00:10:30 -to 00:30:00 -i test_video.mp4 -qscale:v 2 -vf "fps=0.5" ima
 
 ffmpeg -i test_video.mp4 -qscale:v 2 -vf "fps=2,scale=1280:720" images/thesis_%04d.jpg
 
+ffmpeg -i -F-hrZKXM-k.mp4 -ss 00:10:30 -to 00:30:00 -c:v libx264 -c:a aac -movflags +faststart test_video.mp4
 
+ffmpeg -hwaccel cuda -i -F-hrZKXM-k.mp4 -ss 00:10:30 -to 00:30:00 -c:v h264_nvenc -c:a aac -movflags +faststart test_video.mp4
 
+# Cut image
+ffmpeg -hwaccel cuda  -i /home/trung/Desktop/Thesis_University/services/tool/video/test_video.mp4 -q:v 1 images/frame_%06d.jpg
 
-person
-bicycle
-car
-motorcycle
-airplane
-bus
-train
-truck
-boat
-traffic lightdone
+# Cut image with skip frame
+ffmpeg -hwaccel cuda -i /home/trung/Desktop/Thesis_University/services/tool/video/test_video.mp4 \
+-vf "select=gte(n\,4)" -vsync vfr -q:v 1 images/frame_%06d.jpg

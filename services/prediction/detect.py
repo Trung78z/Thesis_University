@@ -4,8 +4,8 @@ from AdvancedLaneDetector import AdvancedLaneDetector
 
 
 if __name__ == "__main__":
-    detector = AdvancedLaneDetector(yolo_model_path="yolo11l-seg.pt")
-    cap = cv2.VideoCapture("tool/trip_cut.mp4")
+    detector = AdvancedLaneDetector(yolo_model_path="models/traffic-sign-x.engine",)
+    cap = cv2.VideoCapture("tool/video/test_video.mp4")
     
     while cap.isOpened():
             ret, frame = cap.read()
