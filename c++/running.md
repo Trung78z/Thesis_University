@@ -32,3 +32,6 @@ scp -r ./models trung@192.168.1.8:~/Desktop/c++
 
 
 sudo apt-get install libcanberra-gtk-module libcanberra-gtk3-module
+
+
+CMake: Delete Cache and Reconfigure

@@ -1,13 +1,13 @@
 #include "Detect.h"
 #include "logging.h"
-#include "cuda_utils.h"
-#include "macros.h"
+#include "common/cuda_utils.h"
+#include "common/macros.h"
 #include "preprocess.h"
 #include <NvOnnxParser.h>
 #include "common.h"
 #include <fstream>
 #include <iostream>
-
+#include <libfollowdist/FrontDistanceEstimator.h>
 static Logger logger;
 #define isFP16 true
 #define warmup true
@@ -27,10 +27,11 @@ Detect::Detect(string model_path, nvinfer1::ILogger &logger)
     }
 
 #if NV_TENSORRT_MAJOR < 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR < 5)
-    // For TensorRT < 8.5, use getBindingDimensions
+    // // For TensorRT < 8.5, use getBindingDimensions
     auto input_dims = engine->getBindingDimensions(0);
     input_h = input_dims.d[2];
     input_w = input_dims.d[3];
+    std::cout << "TensorRT version is lower than 8.5, using getBindingDimensions." << std::endl;
 #else
     // For TensorRT >= 8.5, use getIOTensorName and getTensorShape
     auto input_dims = engine->getTensorShape(engine->getIOTensorName(0));
@@ -311,6 +312,37 @@ void Detect::draw(Mat &image, const vector<Detection> &output)
 
         // Draw rectangle
         rectangle(image, cv::Rect(box.x, box.y, box.width, box.height), color, 2);
+
+        // Draw center point
+        cv::Point center(box.x + box.width / 2, box.y + box.height / 2);
+        cv::circle(image, center, 3, color, -1);
+        // Draw distance estimation
+        if (class_id == 2 || class_id == 4 || class_id == 5)
+        {
+            FrontDistanceEstimator distance_estimator;
+            double focal_length = 1000.0;   // Example focal length, adjust as needed
+            double real_object_width = 1.5; // Default width
+
+            if (class_id == 2)
+            {
+                real_object_width = 1.6;
+            }
+            else if (class_id == 4 || class_id == 5)
+            {
+                real_object_width = 2.5;
+            }
+
+            double pixel_distance = box.width;
+            double distance = distance_estimator.estimate(pixel_distance, focal_length, real_object_width);
+
+            std::ostringstream distance_ss;
+            distance_ss << std::fixed << std::setprecision(2) << distance << " m";
+            std::string distance_text = distance_ss.str();
+
+            // Draw distance text (white text with black outline)
+            putText(image, distance_text, cv::Point(box.x + 2, box.y - 20),
+                    FONT_HERSHEY_SIMPLEX, 0.6, Scalar(255, 255, 255), 2);
+        }
 
         // Prepare label text
         std::ostringstream label_ss;

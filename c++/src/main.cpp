@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include "Detect.h"
+#include <calculator/calc.h>
 
 bool IsPathExist(const string &path)
 {

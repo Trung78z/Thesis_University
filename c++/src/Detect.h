@@ -1,3 +1,5 @@
+#ifndef DETECT_H
+#define DETECT_H
 #pragma once  
 
 #include "NvInfer.h"    // TensorRT library for high-performance inference
@@ -69,10 +71,10 @@ private:
     const int MAX_IMAGE_SIZE = 4096 * 4096;
 
     // Confidence threshold for filtering detections
-    float conf_threshold = 0.3f;
+    float conf_threshold = 0.5f;
 
     // Non-Maximum Suppression (NMS) threshold to remove duplicate boxes
-    float nms_threshold = 0.4f;
+    float nms_threshold = 0.6f;
 
     // Colors for drawing bounding boxes for each class
     vector<Scalar> colors;
@@ -83,3 +85,4 @@ private:
     // Save the built TensorRT engine to a file
     bool saveEngine(const std::string& filename);
 };
+#endif // DETECT_H
