@@ -1,0 +1,12 @@
+.vscode
+**/*.pt
+**/*.onnx
+**/*.engine
+**/*.mp4
+tool/dataset
+**/*.zip
+models
+.env
+dataset
+**/tool/main
+**/tool/images_origin
