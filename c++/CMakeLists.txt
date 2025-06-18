@@ -91,28 +91,20 @@ file(GLOB LIB_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/include/tensorrt/*.h"
 )
 
-# Add CUDA files to library sources
-list(APPEND LIB_SOURCES 
-    "${CMAKE_SOURCE_DIR}/include/lanevision/LaneDetectorCUDA.cu"
-)
+
 
 message(STATUS "LIB_SOURCES: ${LIB_SOURCES}") # Debug output
 
 # Create library with CUDA support
 add_library(acc STATIC ${LIB_SOURCES})
 
-# Set CUDA properties for the library
-set_target_properties(acc PROPERTIES
-    CUDA_SEPARABLE_COMPILATION ON
-    POSITION_INDEPENDENT_CODE ON
-)
+
 
 target_include_directories(acc PUBLIC
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/lanevision
     ${CMAKE_SOURCE_DIR}/include/followdist
     ${CMAKE_SOURCE_DIR}/include/tensorrt
-    ${CUDA_INCLUDE_DIRS}
 )
 
 # Create executable
@@ -126,9 +118,6 @@ target_link_libraries(${PROJECT_NAME}
         ${TensorRT_LIBRARIES}
         ${CUDA_LIBRARIES}
         cudart
-        cublas
-        curand
-        thrust
 )
 
 # CUDA architectures
@@ -144,18 +133,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     INSTALL_RPATH "\$ORIGIN;${TensorRT_LIB_DIR};${CUDA_TOOLKIT_ROOT_DIR}/lib64"
 )
 
-# Set CUDA properties for the main executable
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    CUDA_SEPARABLE_COMPILATION ON
-)
 
 # Suppress deprecated declarations for TensorRT
 if(ARCH_NAME STREQUAL "aarch64")
     target_compile_options(${PROJECT_NAME} PRIVATE -Wno-deprecated-declarations)
 endif()
-
-# CUDA compilation flags
-set_target_properties(acc PROPERTIES
-    CUDA_ARCHITECTURES "${CUDA_ARCH_LIST}"
-    CUDA_FLAGS "-O3 -arch=sm_${CUDA_ARCH_LIST} --use_fast_math"
-)
