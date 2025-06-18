@@ -5,3 +5,4 @@ models
 output.mp4
 build
 **/*.zip
+Makefile
