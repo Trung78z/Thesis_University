@@ -1,7 +1,7 @@
 # Makefile
 
 TARGET = detection
-ENGINE = models/t1.engine
+ENGINE = models/thesis2.onnx
 INPUT  = test_video.mp4
 BUILD_DIR = build
 

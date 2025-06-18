@@ -103,7 +103,9 @@ int main(int argc, char **argv)
     LaneDetector laneDetector;  
     if (isVideo)
     {
+
         cout << "Opening video: " << path << endl;
+        // cv::VideoCapture('nvarguscamerasrc ! video/x-raw(memory:NVMM),width=1280,height=720,framerate=30/1 ! nvvidconv ! video/x-raw,format=BGRx ! videoconvert ! appsink', cv::CAP_GSTREAMER);
         // std::string capture_pipeline = 
         //     "nvarguscamerasrc ! "
         //     "video/x-raw(memory:NVMM), width=" + std::to_string(WIDTH) + 
