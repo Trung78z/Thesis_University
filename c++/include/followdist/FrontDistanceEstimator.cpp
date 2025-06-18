@@ -1,4 +1,4 @@
-#include <libfollowdist/FrontDistanceEstimator.h>
+#include <followdist/FrontDistanceEstimator.h>
 
 FrontDistanceEstimator::FrontDistanceEstimator() {}
 double FrontDistanceEstimator::estimate(double pixelDistance, double focalLength, double realObjectWidth) {

@@ -1,5 +1,3 @@
-#ifndef DETECT_H
-#define DETECT_H
 #pragma once  
 
 #include "NvInfer.h"    // TensorRT library for high-performance inference
@@ -85,4 +83,3 @@ private:
     // Save the built TensorRT engine to a file
     bool saveEngine(const std::string& filename);
 };
-#endif // DETECT_H

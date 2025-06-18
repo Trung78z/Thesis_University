@@ -1,13 +1,13 @@
 #include "Detect.h"
-#include "logging.h"
+#include "tensorrt/logging.h"
 #include "common/cuda_utils.h"
 #include "common/macros.h"
 #include "preprocess.h"
 #include <NvOnnxParser.h>
-#include "common.h"
+#include "common/common.h"
 #include <fstream>
 #include <iostream>
-#include <libfollowdist/FrontDistanceEstimator.h>
+#include <followdist/FrontDistanceEstimator.h>
 static Logger logger;
 #define isFP16 true
 #define warmup true
@@ -280,7 +280,6 @@ void Detect::draw(Mat &image, const vector<Detection> &output)
 {
     const float ratio_h = input_h / (float)image.rows;
     const float ratio_w = input_w / (float)image.cols;
-
     for (const auto &detection : output)
     {
         auto box = detection.bbox;
@@ -340,8 +339,8 @@ void Detect::draw(Mat &image, const vector<Detection> &output)
             std::string distance_text = distance_ss.str();
 
             // Draw distance text (white text with black outline)
-            putText(image, distance_text, cv::Point(box.x + 2, box.y - 20),
-                    FONT_HERSHEY_SIMPLEX, 0.6, Scalar(255, 255, 255), 2);
+            cv::putText(image, distance_text, cv::Point(box.x + 2, box.y - 20),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 255, 255), 2);
         }
 
         // Prepare label text

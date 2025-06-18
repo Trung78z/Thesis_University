@@ -1,5 +1,8 @@
-#ifndef COMMON_H
-#define COMMON_H
+// common.h
+// =============================================================================
+// Project: LaneVision
+
+#pragma once
 #include <iostream>
 #include <vector>
 
@@ -44,5 +47,3 @@ const std::vector<std::vector<unsigned int>> COLORS = {
     {255, 0, 85},     // Speed limit 120km-h (pinkish red)
     {128, 128, 128}   // End of speed limit 80km-h (neutral gray)
 };
-
-#endif // COMMON_H

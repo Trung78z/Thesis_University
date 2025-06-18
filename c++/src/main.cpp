@@ -8,7 +8,12 @@
 #include <iostream>
 #include <string>
 #include "Detect.h"
-#include <calculator/calc.h>
+#include <lanevision/LaneDetector.h>
+
+
+const int WIDTH = 1280;
+const int HEIGHT = 720;
+const int FPS = 30;
 
 bool IsPathExist(const string &path)
 {
@@ -95,10 +100,21 @@ int main(int argc, char **argv)
     {
         return 0;
     }
-
+    LaneDetector laneDetector;  
     if (isVideo)
     {
         cout << "Opening video: " << path << endl;
+        // std::string capture_pipeline = 
+        //     "nvarguscamerasrc ! "
+        //     "video/x-raw(memory:NVMM), width=" + std::to_string(WIDTH) + 
+        //     ", height=" + std::to_string(HEIGHT) + 
+        //     ", format=NV12, framerate=" + std::to_string(FPS) + "/1 ! "
+        //     "nvvidconv flip-method=0 ! "
+        //     "video/x-raw, format=BGRx ! "
+        //     "videoconvert ! "
+        //     "video/x-raw, format=BGR ! "
+        //     "appsink drop=true";
+        // cv::VideoCapture cap(capture_pipeline, cv::CAP_GSTREAMER);
         cv::VideoCapture cap(path);
 
         if (!cap.isOpened())
@@ -135,7 +151,8 @@ int main(int argc, char **argv)
 
             model.postprocess(objects);
             model.draw(image, objects);
-
+            std::vector<cv::Vec4i> lanes = laneDetector.detectLanes(image);
+            laneDetector.drawLanes(image, lanes);
             // FPS calculation
             frameCount++;
             auto now = std::chrono::steady_clock::now();
@@ -187,7 +204,8 @@ int main(int argc, char **argv)
 
             model.postprocess(objects);
             model.draw(image, objects);
-
+            std::vector<cv::Vec4i> lanes = laneDetector.detectLanes(image);
+            laneDetector.drawLanes(image, lanes);
             auto tc = (double)std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.;
             printf("cost %2.4lf ms\n", tc);
 

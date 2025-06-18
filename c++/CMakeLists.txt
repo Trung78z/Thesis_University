@@ -19,12 +19,13 @@ endif()
 find_package(CUDA REQUIRED)
 include_directories(${CUDA_INCLUDE_DIRS})
 
+# Suppress deprecated GPU architecture warnings
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-deprecated-gpu-targets")
+
 # Source files
 set(HEADERS
     src/Detect.h
-    src/logging.h
     src/preprocess.h
-    src/common.h
 )
 
 set(SOURCES
@@ -44,17 +45,20 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 # TensorRT detection
 if(ARCH_NAME STREQUAL "aarch64")
-    message(STATUS "Jetson detected - using TensorRT < 8.5")
+    message(STATUS "Jetson detected - using TensorRT")
     set(TensorRT_INCLUDE_DIR "/usr/include/aarch64-linux-gnu")
     set(TensorRT_LIB_DIR "/usr/lib/aarch64-linux-gnu")
 else()
-    message(STATUS "Ubuntu detected with TensorRT")
+    message(STATUS "x86_64 detected with TensorRT")
     set(TensorRT_INCLUDE_DIR "/usr/include/x86_64-linux-gnu")
     set(TensorRT_LIB_DIR "/usr/lib/x86_64-linux-gnu")
 endif()
-# add_compile_options(-Wno-deprecated-declarations)
 
-# Check header
+# Allow user to override TensorRT paths
+set(TensorRT_INCLUDE_DIR ${TensorRT_INCLUDE_DIR} CACHE PATH "TensorRT include directory")
+set(TensorRT_LIB_DIR ${TensorRT_LIB_DIR} CACHE PATH "TensorRT library directory")
+
+# Check TensorRT header
 if(NOT EXISTS "${TensorRT_INCLUDE_DIR}/NvInfer.h")
     message(FATAL_ERROR "TensorRT header (NvInfer.h) not found in ${TensorRT_INCLUDE_DIR}")
 endif()
@@ -66,6 +70,7 @@ foreach(lib ${TensorRT_LIBS})
     if(NOT TensorRT_${lib}_LIBRARY)
         message(FATAL_ERROR "TensorRT library ${lib} not found in ${TensorRT_LIB_DIR}")
     endif()
+    list(APPEND TensorRT_LIBRARIES ${TensorRT_${lib}_LIBRARY})
 endforeach()
 
 # Include directories
@@ -73,30 +78,45 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${TensorRT_INCLUDE_DIR}
 )
-file(GLOB_RECURSE LIB_SOURCES CONFIGURE_DEPENDS
+
+# Static library
+file(GLOB LIB_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/include/*.cpp"
     "${CMAKE_SOURCE_DIR}/include/*.h"
+    "${CMAKE_SOURCE_DIR}/include/lanevision/*.cpp"
+    "${CMAKE_SOURCE_DIR}/include/lanevision/*.h"
+    "${CMAKE_SOURCE_DIR}/include/followdist/*.cpp"
+    "${CMAKE_SOURCE_DIR}/include/followdist/*.h"
+    "${CMAKE_SOURCE_DIR}/include/tensorrt/*.cpp"
+    "${CMAKE_SOURCE_DIR}/include/tensorrt/*.h"
+)
+message(STATUS "LIB_SOURCES: ${LIB_SOURCES}") # Debug output
+add_library(acc STATIC ${LIB_SOURCES})
+target_include_directories(acc PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/lanevision
+    ${CMAKE_SOURCE_DIR}/include/followdist
+    ${CMAKE_SOURCE_DIR}/include/tensorrt
 )
 
-add_library(libfollowdist STATIC ${LIB_SOURCES})
-target_include_directories(libfollowdist PUBLIC ${CMAKE_SOURCE_DIR}/include)
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+
 # Link libraries
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE libfollowdist
-    ${OpenCV_LIBS}
-    ${TensorRT_LIBS}
-    ${CUDA_LIBRARIES}
-    cudart
+    PRIVATE
+        acc
+        ${OpenCV_LIBS}
+        ${TensorRT_LIBRARIES}
+        ${CUDA_LIBRARIES}
+        cudart
 )
 
 # CUDA architectures
 if(ARCH_NAME STREQUAL "aarch64")
-    # Jetson Nano = compute 53 (sm_53)
-    set(CUDA_ARCH_LIST "53")
+    set(CUDA_ARCH_LIST "53") # Jetson Nano
 else()
-    set(CUDA_ARCH_LIST "60;70;75;80;86")
+    set(CUDA_ARCH_LIST "75;80;86") # Turing, Ampere, Ada Lovelace
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -104,3 +124,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     BUILD_RPATH "\$ORIGIN;${TensorRT_LIB_DIR};${CUDA_TOOLKIT_ROOT_DIR}/lib64"
     INSTALL_RPATH "\$ORIGIN;${TensorRT_LIB_DIR};${CUDA_TOOLKIT_ROOT_DIR}/lib64"
 )
+
+# Suppress deprecated declarations for TensorRT
+if(ARCH_NAME STREQUAL "aarch64")
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-deprecated-declarations)
+endif()

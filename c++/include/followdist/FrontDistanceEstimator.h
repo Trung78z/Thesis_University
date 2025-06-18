@@ -1,6 +1,7 @@
-// FrontDistanceEstimator.h
 #pragma once
 #include <iostream>
+#include <stdexcept>
+
 class FrontDistanceEstimator {
 public:
     FrontDistanceEstimator();
