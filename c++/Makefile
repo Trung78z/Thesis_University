@@ -2,7 +2,7 @@
 
 TARGET = detection
 ENGINE = models/t1.engine
-INPUT  = frame_0117.jpg
+INPUT  = test_video.mp4
 BUILD_DIR = build
 
 # Default target
