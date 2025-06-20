@@ -141,7 +141,7 @@ int main(int argc, char **argv)
                 break;
             }
             // Resize the image to fit the window
-            cv::resize(image, image, cv::Size(1280, 720));
+            cv::resize(image, image, cv::Size(WIDTH, HEIGHT));
 
             vector<Detection> objects;
 

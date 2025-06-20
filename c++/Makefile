@@ -1,7 +1,7 @@
 # Makefile
 
 TARGET = detection
-ENGINE = models/thesis2.engine
+ENGINE = models/best.engine
 INPUT  = test_video.mp4
 BUILD_DIR = build
 
@@ -11,9 +11,16 @@ run: build
 	@$(BUILD_DIR)/$(TARGET) $(ENGINE) $(INPUT) || echo "❌ Program failed"
 
 build:
-	@echo "Building project..."
+	@echo "Building project with maximum optimization..."
 	@mkdir -p $(BUILD_DIR)
-	@cd $(BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release .. && make -j$(nproc)
+	@cd $(BUILD_DIR) && \
+	cmake -DCMAKE_BUILD_TYPE=Release \
+	      -DCMAKE_C_FLAGS_RELEASE="-O3 -march=native -mtune=native -DNDEBUG -flto" \
+	      -DCMAKE_CXX_FLAGS_RELEASE="-O3 -march=native -mtune=native -DNDEBUG -flto" \
+	      -DCMAKE_EXE_LINKER_FLAGS="-flto" \
+	      .. && \
+	make -j$(nproc)
+
 
 debug:
 	@echo "Building with debug symbols..."
@@ -23,3 +30,5 @@ debug:
 clean:
 	@echo "Cleaning build directory..."
 	@rm -rf $(BUILD_DIR)
+
+rebuild: clean build
