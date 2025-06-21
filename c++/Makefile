@@ -14,12 +14,7 @@ build:
 	@echo "Building project with maximum optimization..."
 	@mkdir -p $(BUILD_DIR)
 	@cd $(BUILD_DIR) && \
-	cmake -DCMAKE_BUILD_TYPE=Release \
-	      -DCMAKE_C_FLAGS_RELEASE="-O3 -march=native -mtune=native -DNDEBUG -flto" \
-	      -DCMAKE_CXX_FLAGS_RELEASE="-O3 -march=native -mtune=native -DNDEBUG -flto" \
-	      -DCMAKE_EXE_LINKER_FLAGS="-flto" \
-	      .. && \
-	make -j$(nproc)
+	cmake -DCMAKE_BUILD_TYPE=Release .. && make -j$(nproc)
 
 
 debug:

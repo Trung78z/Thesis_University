@@ -10,7 +10,6 @@
 #include "Detect.h"
 #include <lanevision/LaneDetector.h>
 
-
 const int WIDTH = 1280;
 const int HEIGHT = 720;
 const int FPS = 30;
@@ -100,16 +99,16 @@ int main(int argc, char **argv)
     {
         return 0;
     }
-    LaneDetector laneDetector;  
+    LaneDetector laneDetector;
     if (isVideo)
     {
 
         cout << "Opening video: " << path << endl;
         // cv::VideoCapture('nvarguscamerasrc ! video/x-raw(memory:NVMM),width=1280,height=720,framerate=30/1 ! nvvidconv ! video/x-raw,format=BGRx ! videoconvert ! appsink', cv::CAP_GSTREAMER);
-        // std::string capture_pipeline = 
+        // std::string capture_pipeline =
         //     "nvarguscamerasrc ! "
-        //     "video/x-raw(memory:NVMM), width=" + std::to_string(WIDTH) + 
-        //     ", height=" + std::to_string(HEIGHT) + 
+        //     "video/x-raw(memory:NVMM), width=" + std::to_string(WIDTH) +
+        //     ", height=" + std::to_string(HEIGHT) +
         //     ", format=NV12, framerate=" + std::to_string(FPS) + "/1 ! "
         //     "nvvidconv flip-method=0 ! "
         //     "video/x-raw, format=BGRx ! "
@@ -142,18 +141,65 @@ int main(int argc, char **argv)
             }
             // Resize the image to fit the window
             cv::resize(image, image, cv::Size(WIDTH, HEIGHT));
-
             vector<Detection> objects;
 
             model.preprocess(image);
 
-            auto start = std::chrono::system_clock::now();
             model.infer();
-            auto end = std::chrono::system_clock::now();
 
             model.postprocess(objects);
             model.draw(image, objects);
             std::vector<cv::Vec4i> lanes = laneDetector.detectLanes(image);
+            // if (lanes.size() >= 2)
+            // {
+            //     // Lấy 2 lane (trái - phải)
+            //     cv::Vec4i l0 = lanes[0];
+            //     cv::Vec4i l1 = lanes[1];
+
+            //     // Tính điểm giữa lane để vẽ line
+            //     cv::Point laneTop((l0[0] + l1[0]) / 2, (l0[1] + l1[1]) / 2);
+            //     cv::Point laneBottom((l0[2] + l1[2]) / 2, (l0[3] + l1[3]) / 2);
+
+            //     // Tạo polygon vùng làn theo thứ tự: top-left → top-right → bottom-right → bottom-left
+            //     std::vector<cv::Point> lane_area = {
+            //         cv::Point(l0[0], l0[1]), // top-left
+            //         cv::Point(l1[0], l1[1]), // top-right
+            //         cv::Point(l1[2], l1[3]), // bottom-right
+            //         cv::Point(l0[2], l0[3])  // bottom-left
+            //     };
+
+
+
+            //     for (const auto &obj : objects)
+            //     {
+            //         if (obj.class_id == 2 || obj.class_id == 4 || obj.class_id == 5) // chỉ xét car/bus/truck
+            //         {
+            //             cv::Point foot(obj.bbox.x + obj.bbox.width / 2,
+            //                            obj.bbox.y + obj.bbox.height); // đáy bbox (dùng để test)
+
+            //             if (cv::pointPolygonTest(lane_area, foot, false) >= 0) // xe trong làn
+            //             {
+            //                 // ① vẽ chấm ở đáy (giữ nếu muốn)
+            //                 // cv::circle(image, foot, 4, cv::Scalar(0,0,255), -1);
+
+            //                 // ② vẽ chấm ở chính giữa bbox
+            //                 cv::Point mid(obj.bbox.x + obj.bbox.width / 2,
+            //                               obj.bbox.y + obj.bbox.height / 2);      // tâm bbox
+            //                 cv::circle(image, mid, 5, cv::Scalar(0, 255, 0), -1); // chấm xanh lục
+
+            //                 // (tuỳ chọn) lưu khung hình
+            //                 std::string filename = "tmp/frame_in_lane_" +
+            //                                        std::to_string(int(obj.conf * 1000)) + ".jpg";
+            //                 cv::imwrite(filename, image);
+            //             }
+            //         }
+            //     }
+            // }
+            // else
+            // {
+            //     std::cout << "Not enough lanes detected to define a lane area." << std::endl;
+            // }
+
             laneDetector.drawLanes(image, lanes);
             // FPS calculation
             frameCount++;
@@ -172,7 +218,6 @@ int main(int argc, char **argv)
                         cv::Scalar(0, 255, 0), 2);
 
             cv::imshow("Result", image);
-
             if (cv::waitKey(1) == 'q')
             { // Press ESC to exit
                 break;

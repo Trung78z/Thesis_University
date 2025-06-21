@@ -312,9 +312,9 @@ void Detect::draw(Mat &image, const vector<Detection> &output)
         // Draw rectangle
         rectangle(image, cv::Rect(box.x, box.y, box.width, box.height), color, 2);
 
-        // Draw center point
-        cv::Point center(box.x + box.width / 2, box.y + box.height / 2);
-        cv::circle(image, center, 3, color, -1);
+        // // Draw center point
+        // cv::Point center(box.x + box.width / 2, box.y + box.height / 2);
+        // cv::circle(image, center, 3, color, -1);
         // Draw distance estimation
         if (class_id == 2 || class_id == 4 || class_id == 5)
         {
