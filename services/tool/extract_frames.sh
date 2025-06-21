@@ -10,4 +10,4 @@ n=$(ls $OUT_DIR | wc -l)
 start_num=$((n+1))
 
 # Chạy ffmpeg
-ffmpeg -hwaccel cuda -i "$INPUT" -qscale:v 2 -vf "fps=1/4" -start_number $start_num $OUT_DIR/frame_%04d.jpg
+ffmpeg -hwaccel cuda -i "$INPUT" -qscale:v 2 -vf "fps=1/3" -start_number $start_num $OUT_DIR/frame_%04d.jpg

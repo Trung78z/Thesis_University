@@ -10,3 +10,4 @@ models
 dataset
 **/tool/main
 **/tool/images_origin
+**/__pycache__

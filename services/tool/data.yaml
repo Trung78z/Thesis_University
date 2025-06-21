@@ -1,22 +1,24 @@
-nc: 18
 names:
-  [
-    "person",
-    "bicycle",
-    "car",
-    "motorcycle",
-    "bus",
-    "truck",
-    "other-vehicle",
-    "traffic light",
-    "Speed limit 20km-h",
-    "Speed limit 30km-h",
-    "speed limit 40km-h",
-    "Speed limit 50km-h",
-    "Speed limit 60km-h",
-    "Speed limit 70km-h",
-    "Speed limit 80km-h",
-    "Speed limit 100km-h",
-    "Speed limit 120km-h",
-    "End of speed limit 80km-h",
-  ]
+  0: person
+  1: bicycle
+  2: car
+  3: motorcycle
+  4: bus
+  5: truck
+  6: stop sign
+  7: other-vehicle
+  8: crosswalk
+  9: red light
+  10: yellow light
+  11: green light
+  12: Speed limit 30km-h
+  13: Speed limit 40km-h
+  14: Speed limit 50km-h
+  15: Speed limit 60km-h
+  16: Speed limit 70km-h
+  17: Speed limit 80km-h
+  18: End of speed limit 60km-h
+  19: End of speed limit 70km-h
+  20: End of speed limit 80km-h
+
+nc: 21  # Số lượng class

@@ -6,3 +6,6 @@ auto_video:
 
 append:
 	python auto_annotation_append.py
+
+auto_img:
+	python auto_anotation.py

@@ -3,7 +3,7 @@ import shutil
 from tqdm import tqdm
 
 # COCO root path
-coco_root = Path("./carvideo")
+coco_root = Path("./dataset/datas")
 
 # Original label and image directories
 labels_dir = coco_root / "train" / "labels"

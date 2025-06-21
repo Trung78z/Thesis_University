@@ -9,15 +9,27 @@ class CustomYOLOv11VideoProcessor:
         """Initialize YOLOv11 model with custom class names."""
         self.model = YOLO(model_path)
         self.custom_classes = [
-            "person",
-            "bicycle",
-            "car",
-            "motorcycle",
-            "bus",
-            "truck",
-            "other-vehicle",
-            "traffic light",
-            "stop sign"
+            'person',
+            'bicycle',
+            'car',
+            'motorcycle',
+            'bus',
+            'truck',
+            'stop sign',
+            'other-vehicle',
+            'crosswalk',
+            'red light',
+            'yellow light',
+            'green light',
+            'Speed limit 30km-h',
+            'Speed limit 40km-h',
+            'Speed limit 50km-h',
+            'Speed limit 60km-h',
+            'Speed limit 70km-h',
+            'Speed limit 80km-h',
+            'End of speed limit 60km-h',
+            'End of speed limit 70km-h',
+            'End of speed limit 80km-h'
         ]
         # Mapping of custom classes to COCO class IDs (based on YOLOv11 COCO classes)
         self.coco_classes = [
@@ -37,8 +49,8 @@ class CustomYOLOv11VideoProcessor:
         for coco_id, coco_name in enumerate(self.coco_classes):
             if coco_name in self.custom_classes:
                 self.coco_to_custom[coco_id] = self.custom_classes.index(coco_name)
-            elif coco_name in ["airplane", "train", "boat"]:  # Map to 'other-vehicle'
-                self.coco_to_custom[coco_id] = self.custom_classes.index("other-vehicle")
+            elif coco_name == 'traffic light':  # Map to 'other-vehicle'
+                self.coco_to_custom[coco_id] = self.custom_classes.index("green light")
 
         # Generate distinct colors for each custom class
         self.colors = np.random.uniform(0, 255, size=(len(self.custom_classes), 3))
