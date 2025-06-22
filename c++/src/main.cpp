@@ -156,7 +156,7 @@ int main(int argc, char **argv)
 
             std::vector<cv::Vec4i> lanes = laneDetector.detectLanes(image);
 
-            // Logger  objects
+            // Log detected objects
             for (const auto &obj : objects)
             {
                 auto box = obj.bbox;
@@ -184,18 +184,19 @@ int main(int argc, char **argv)
                 box.y = std::max(0.0f, static_cast<float>(box.y));
                 box.width = std::min(static_cast<float>(box.width), static_cast<float>(image.cols - box.x));
                 box.height = std::min(static_cast<float>(box.height), static_cast<float>(image.rows - box.y));
-
+                cv::Point bottom_center(box.x + box.width / 2,
+                                        box.y + box.height);
                 if (lanes.size() >= 2)
                 {
-                    // Lấy 2 lane (trái - phải)
+                    // Get 2 lanes (left - right)
                     cv::Vec4i l0 = lanes[0];
                     cv::Vec4i l1 = lanes[1];
 
-                    // Tính điểm giữa lane để vẽ line
+                    // Calculate the middle point of the lane to draw a line
                     cv::Point laneTop((l0[0] + l1[0]) / 2, (l0[1] + l1[1]) / 2);
                     cv::Point laneBottom((l0[2] + l1[2]) / 2, (l0[3] + l1[3]) / 2);
 
-                    // Tạo polygon vùng làn theo thứ tự: top-left → top-right → bottom-right → bottom-left
+                    // Create a polygon for the lane area in order: top-left → top-right → bottom-right → bottom-left
                     std::vector<cv::Point> lane_area = {
                         cv::Point(l0[0], l0[1]), // top-left
                         cv::Point(l1[0], l1[1]), // top-right
@@ -203,17 +204,14 @@ int main(int argc, char **argv)
                         cv::Point(l0[2], l0[3])  // bottom-left
                     };
 
-                    if (obj.class_id == 2 || obj.class_id == 4 || obj.class_id == 5) // chỉ xét car/bus/truck
+                    if (obj.class_id == 2 || obj.class_id == 4 || obj.class_id == 5) // only consider car/bus/truck
                     {
-                        cv::Point bottom_center(box.x + box.width / 2,
-                                       box.y + box.height); // đáy bbox (dùng để test)
-
-                        if (cv::pointPolygonTest(lane_area, bottom_center, false) >= 0) // xe trong làn
+                        if (cv::pointPolygonTest(lane_area, bottom_center, false) >= 0) // vehicle is in the lane
                         {
-                            // ① vẽ chấm ở chính giữa bbox
+                            // ① draw a dot at the center of the bbox
                             cv::Point mid(box.x + box.width / 2,
-                                          box.y + box.height / 2);      // tâm bbox
-                            cv::circle(image, mid, 5, cv::Scalar(0, 255, 0), -1); // chấm xanh lục
+                                          box.y + box.height / 2);                // bbox center
+                            cv::circle(image, mid, 5, cv::Scalar(0, 255, 0), -1); // green dot
                         }
                     }
                 }
