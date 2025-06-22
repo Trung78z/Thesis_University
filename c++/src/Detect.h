@@ -36,6 +36,8 @@ public:
     // Draw bounding boxes and labels on the original image
     void draw(Mat& image, const vector<Detection>& output);
 
+    int getInputH();
+    int getInputW();
 private:
     // Initialize the TensorRT engine from a serialized model file
     void init(std::string engine_path, nvinfer1::ILogger& logger);
@@ -69,7 +71,7 @@ private:
     const int MAX_IMAGE_SIZE = 4096 * 4096;
 
     // Confidence threshold for filtering detections
-    float conf_threshold = 0.5f;
+    float conf_threshold = 0.6f;
 
     // Non-Maximum Suppression (NMS) threshold to remove duplicate boxes
     float nms_threshold = 0.6f;
@@ -82,4 +84,5 @@ private:
 
     // Save the built TensorRT engine to a file
     bool saveEngine(const std::string& filename);
+
 };

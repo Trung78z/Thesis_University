@@ -31,12 +31,15 @@ Detect::Detect(string model_path, nvinfer1::ILogger &logger)
     auto input_dims = engine->getBindingDimensions(0);
     input_h = input_dims.d[2];
     input_w = input_dims.d[3];
+    cout << "Input dimensions: " << input_h << "x" << input_w << std::endl;
     std::cout << "TensorRT version is lower than 8.5, using getBindingDimensions." << std::endl;
 #else
     // For TensorRT >= 8.5, use getIOTensorName and getTensorShape
     auto input_dims = engine->getTensorShape(engine->getIOTensorName(0));
     input_h = input_dims.d[2];
     input_w = input_dims.d[3];
+    cout << "Input dimensions: " << input_h << "x" << input_w << std::endl;
+    std::cout << "TensorRT version is 8.5 or higher, using getIOTensorName and getTensorShape." << std::endl;
 #endif
 }
 
@@ -319,7 +322,7 @@ void Detect::draw(Mat &image, const vector<Detection> &output)
         if (class_id == 2 || class_id == 4 || class_id == 5)
         {
             FrontDistanceEstimator distance_estimator;
-            double focal_length = 1000.0;   // Example focal length, adjust as needed
+            double focal_length = 1500.0;   // Example focal length, adjust as needed
             double real_object_width = 1.5; // Default width
 
             if (class_id == 2)
@@ -357,4 +360,14 @@ void Detect::draw(Mat &image, const vector<Detection> &output)
         putText(image, label, cv::Point(box.x + 2, box.y - 5),
                 FONT_HERSHEY_SIMPLEX, 0.6, Scalar(0, 255, 255), 2); // Yellow text
     }
+}
+
+int Detect::getInputH()
+{
+    return input_h;
+}
+
+int Detect::getInputW()
+{
+    return input_w;
 }

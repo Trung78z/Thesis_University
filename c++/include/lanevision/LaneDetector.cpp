@@ -34,26 +34,15 @@ std::vector<cv::Vec4i> LaneDetector::detectLanes(const cv::Mat &frame)
     {
         throw std::invalid_argument("Input frame is empty");
     }
-
-    // Resize frame to consistent size
-    cv::Mat resized;
-    cv::resize(frame, resized, cv::Size(1280, 720));
     height_ = frame.rows;
     width_ = frame.cols;
+    cv::Mat edges = preprocess(frame);
 
-    // Preprocess and detect lines
-    cv::Mat edges = preprocess(resized);
-
-    cv::Mat roi = edges(cv::Range(200, 700), cv::Range::all());
-    std::vector<cv::Vec4i> raw_lines = houghTransform(roi);
-    std::vector<cv::Vec4i> lines;
-for (const auto& l : raw_lines) {
-    lines.emplace_back(cv::Vec4i(l[0], l[1] + 200, l[2], l[3] + 200));
-}
+    std::vector<cv::Vec4i> raw_lines = houghTransform(edges);
     cv::imshow("edge",edges);
 
     // Filter and classify lines
-    auto [left_lines, right_lines] = filterLines(lines);
+    auto [left_lines, right_lines] = filterLines(raw_lines);
 
     // Calculate lanes with temporal smoothing
     auto [left_lane, left_conf] = calculateLane(left_lines, left_history_, prev_left_);

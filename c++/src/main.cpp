@@ -129,9 +129,13 @@ int main(int argc, char **argv)
 
         int frameCount = 0;
         auto fpsStartTime = std::chrono::steady_clock::now();
+        int maxSpeed = -1;    // km/h
+        int accMaxSpeed = 90; // km/h
+        int accSpeed = 60;    // km/h
 
         while (true)
         {
+            auto now = std::chrono::steady_clock::now();
             cv::Mat image;
             cap >> image;
 
@@ -142,68 +146,116 @@ int main(int argc, char **argv)
             // Resize the image to fit the window
             cv::resize(image, image, cv::Size(WIDTH, HEIGHT));
             vector<Detection> objects;
-
+            const float ratio_h = model.getInputH() / (float)image.rows;
+            const float ratio_w = model.getInputW() / (float)image.cols;
             model.preprocess(image);
 
             model.infer();
 
             model.postprocess(objects);
-            model.draw(image, objects);
+
             std::vector<cv::Vec4i> lanes = laneDetector.detectLanes(image);
-            // if (lanes.size() >= 2)
-            // {
-            //     // Lấy 2 lane (trái - phải)
-            //     cv::Vec4i l0 = lanes[0];
-            //     cv::Vec4i l1 = lanes[1];
 
-            //     // Tính điểm giữa lane để vẽ line
-            //     cv::Point laneTop((l0[0] + l1[0]) / 2, (l0[1] + l1[1]) / 2);
-            //     cv::Point laneBottom((l0[2] + l1[2]) / 2, (l0[3] + l1[3]) / 2);
+            // Logger  objects
+            for (const auto &obj : objects)
+            {
+                auto box = obj.bbox;
+                auto class_id = obj.class_id;
+                auto conf = obj.conf;
 
-            //     // Tạo polygon vùng làn theo thứ tự: top-left → top-right → bottom-right → bottom-left
-            //     std::vector<cv::Point> lane_area = {
-            //         cv::Point(l0[0], l0[1]), // top-left
-            //         cv::Point(l1[0], l1[1]), // top-right
-            //         cv::Point(l1[2], l1[3]), // bottom-right
-            //         cv::Point(l0[2], l0[3])  // bottom-left
-            //     };
+                // Adjust box back to original image size
+                if (ratio_h > ratio_w)
+                {
+                    box.x = box.x / ratio_w;
+                    box.y = (box.y - (model.getInputH() - ratio_w * image.rows) / 2) / ratio_w;
+                    box.width = static_cast<int>(box.width / ratio_w);
+                    box.height = static_cast<int>(box.height / ratio_w);
+                }
+                else
+                {
+                    box.x = (box.x - (model.getInputW() - ratio_h * image.cols) / 2) / ratio_h;
+                    box.y = box.y / ratio_h;
+                    box.width = static_cast<int>(box.width / ratio_h);
+                    box.height = static_cast<int>(box.height / ratio_h);
+                }
 
+                // Clamp box coordinates to image size
+                box.x = std::max(0.0f, static_cast<float>(box.x));
+                box.y = std::max(0.0f, static_cast<float>(box.y));
+                box.width = std::min(static_cast<float>(box.width), static_cast<float>(image.cols - box.x));
+                box.height = std::min(static_cast<float>(box.height), static_cast<float>(image.rows - box.y));
 
+                if (lanes.size() >= 2)
+                {
+                    // Lấy 2 lane (trái - phải)
+                    cv::Vec4i l0 = lanes[0];
+                    cv::Vec4i l1 = lanes[1];
 
-            //     for (const auto &obj : objects)
-            //     {
-            //         if (obj.class_id == 2 || obj.class_id == 4 || obj.class_id == 5) // chỉ xét car/bus/truck
-            //         {
-            //             cv::Point foot(obj.bbox.x + obj.bbox.width / 2,
-            //                            obj.bbox.y + obj.bbox.height); // đáy bbox (dùng để test)
+                    // Tính điểm giữa lane để vẽ line
+                    cv::Point laneTop((l0[0] + l1[0]) / 2, (l0[1] + l1[1]) / 2);
+                    cv::Point laneBottom((l0[2] + l1[2]) / 2, (l0[3] + l1[3]) / 2);
 
-            //             if (cv::pointPolygonTest(lane_area, foot, false) >= 0) // xe trong làn
-            //             {
-            //                 // ① vẽ chấm ở đáy (giữ nếu muốn)
-            //                 // cv::circle(image, foot, 4, cv::Scalar(0,0,255), -1);
+                    // Tạo polygon vùng làn theo thứ tự: top-left → top-right → bottom-right → bottom-left
+                    std::vector<cv::Point> lane_area = {
+                        cv::Point(l0[0], l0[1]), // top-left
+                        cv::Point(l1[0], l1[1]), // top-right
+                        cv::Point(l1[2], l1[3]), // bottom-right
+                        cv::Point(l0[2], l0[3])  // bottom-left
+                    };
 
-            //                 // ② vẽ chấm ở chính giữa bbox
-            //                 cv::Point mid(obj.bbox.x + obj.bbox.width / 2,
-            //                               obj.bbox.y + obj.bbox.height / 2);      // tâm bbox
-            //                 cv::circle(image, mid, 5, cv::Scalar(0, 255, 0), -1); // chấm xanh lục
+                    if (obj.class_id == 2 || obj.class_id == 4 || obj.class_id == 5) // chỉ xét car/bus/truck
+                    {
+                        cv::Point bottom_center(box.x + box.width / 2,
+                                       box.y + box.height); // đáy bbox (dùng để test)
 
-            //                 // (tuỳ chọn) lưu khung hình
-            //                 std::string filename = "tmp/frame_in_lane_" +
-            //                                        std::to_string(int(obj.conf * 1000)) + ".jpg";
-            //                 cv::imwrite(filename, image);
-            //             }
-            //         }
-            //     }
-            // }
-            // else
-            // {
-            //     std::cout << "Not enough lanes detected to define a lane area." << std::endl;
-            // }
+                        if (cv::pointPolygonTest(lane_area, bottom_center, false) >= 0) // xe trong làn
+                        {
+                            // ① vẽ chấm ở chính giữa bbox
+                            cv::Point mid(box.x + box.width / 2,
+                                          box.y + box.height / 2);      // tâm bbox
+                            cv::circle(image, mid, 5, cv::Scalar(0, 255, 0), -1); // chấm xanh lục
+                        }
+                    }
+                }
+
+                std::cout << "Detected object: Class ID = " << obj.class_id
+                          << ", Confidence = " << obj.conf
+                          << ", BBox = (" << box.x << ", " << box.y
+                          << ", " << box.width << ", " << box.height << ")"
+                          << std::endl;
+
+                if (obj.class_id == 12 && obj.conf > 0.9) // Assuming class_id 12 is for speed limit signs
+                {
+                    maxSpeed = 30;
+                }
+                else if (obj.class_id == 13 && obj.conf > 0.9) // Assuming class_id 13 is for speed limit signs
+                {
+                    maxSpeed = 40;
+                }
+                else if (obj.class_id == 14 && obj.conf > 0.9) // Assuming class_id 14 is for speed limit signs
+                {
+                    maxSpeed = 50;
+                }
+                else if (obj.class_id == 15 && obj.conf > 0.9) // Assuming class_id 15 is for speed limit signs
+                {
+                    maxSpeed = 60;
+                }
+                else if (obj.class_id == 16 && obj.conf > 0.9) // Assuming class_id 16 is for speed limit signs
+                {
+                    maxSpeed = 70;
+                }
+                else if (obj.class_id == 17 && obj.conf > 0.9) // Assuming class_id 17 is for speed limit signs
+                {
+                    maxSpeed = 80;
+                }
+            }
+
+            model.draw(image, objects);
 
             laneDetector.drawLanes(image, lanes);
             // FPS calculation
             frameCount++;
-            auto now = std::chrono::steady_clock::now();
+
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - fpsStartTime).count();
             if (elapsed >= 1)
             {
@@ -211,10 +263,46 @@ int main(int argc, char **argv)
                 frameCount = 0;
                 fpsStartTime = now;
             }
+            // Draw max speed
+            if (maxSpeed != -1)
+            {
+                cv::putText(image, cv::format("Max Speed: %dKm/h", maxSpeed), cv::Point(10, 60),
+                            cv::FONT_HERSHEY_SIMPLEX, 0.7,
+                            cv::Scalar(255, 0, 0), 2);
+            }
+            else
+            {
+                cv::putText(image, "No Speed Limit Detected", cv::Point(10, 60),
+                            cv::FONT_HERSHEY_SIMPLEX, 0.7,
+                            cv::Scalar(255, 0, 0), 2);
+            }
 
+            // Draw Cruise Control
+
+            cv::putText(image, cv::format("Max Cruise Control: %dKm/h", accMaxSpeed), cv::Point(10, 90),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.7,
+                        cv::Scalar(0, 255, 255), 2);
+            // Draw over speed count
+            cv::putText(image, cv::format("Control speed: %dKm/h", accSpeed), cv::Point(10, 120),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.7,
+                        cv::Scalar(0, 0, 255), 2);
+            if (maxSpeed != -1)
+            {
+                if (accSpeed < maxSpeed && accSpeed < accMaxSpeed)
+                {
+                    accSpeed += 1; // Increase speed by 1 km/h
+                }
+                else if (accSpeed > maxSpeed && accSpeed > 0)
+                {
+                    accSpeed -= 1; // Decrease speed by 1 km/h
+                }
+            }
+            else
+            {
+                accSpeed = accMaxSpeed; // Reset to max speed if no speed limit detected
+            }
             // Draw FPS
-            std::string fpsText = cv::format("FPS: %.2f", fps);
-            cv::putText(image, fpsText, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1.0,
+            cv::putText(image, cv::format("FPS: %.2f", fps), cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.7,
                         cv::Scalar(0, 255, 0), 2);
 
             cv::imshow("Result", image);

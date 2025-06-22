@@ -1,8 +1,9 @@
 # Makefile
 
 TARGET = detection
-ENGINE = models/best.engine
+ENGINE = models/model-23-06.engine
 INPUT  = test_video.mp4
+# INPUT  = /home/trung/Desktop/Thesis_University/services/tool/video/40xZVEFVBuE.mp4
 BUILD_DIR = build
 
 # Default target
