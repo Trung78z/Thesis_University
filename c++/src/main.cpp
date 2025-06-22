@@ -222,29 +222,10 @@ int main(int argc, char **argv)
                           << ", " << box.width << ", " << box.height << ")"
                           << std::endl;
 
-                if (obj.class_id == 12 && obj.conf > 0.9) // Assuming class_id 12 is for speed limit signs
+                if (class_id >= 12 && class_id <= 17 && conf > 0.9)
                 {
-                    maxSpeed = 30;
-                }
-                else if (obj.class_id == 13 && obj.conf > 0.9) // Assuming class_id 13 is for speed limit signs
-                {
-                    maxSpeed = 40;
-                }
-                else if (obj.class_id == 14 && obj.conf > 0.9) // Assuming class_id 14 is for speed limit signs
-                {
-                    maxSpeed = 50;
-                }
-                else if (obj.class_id == 15 && obj.conf > 0.9) // Assuming class_id 15 is for speed limit signs
-                {
-                    maxSpeed = 60;
-                }
-                else if (obj.class_id == 16 && obj.conf > 0.9) // Assuming class_id 16 is for speed limit signs
-                {
-                    maxSpeed = 70;
-                }
-                else if (obj.class_id == 17 && obj.conf > 0.9) // Assuming class_id 17 is for speed limit signs
-                {
-                    maxSpeed = 80;
+                    int newSpeed = (class_id - 11) * 10; // class_id 12 -> 30km/h, 13 -> 40, v.v.
+                    maxSpeed = newSpeed;
                 }
             }
 
