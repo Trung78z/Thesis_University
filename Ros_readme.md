@@ -1,0 +1,1 @@
+git clone --depth 1 https://github.com/Trung78z/vision_opencv.git
