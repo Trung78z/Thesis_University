@@ -1,0 +1,6 @@
+[submodule "vision_opencv"]
+	path = vision_opencv
+	url = https://github.com/Trung78z/vision_opencv.git
+[submodule "ros"]
+	path = ros
+	url = https://github.com/trungpy/thesis_jetson.git

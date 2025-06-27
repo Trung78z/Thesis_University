@@ -39,6 +39,7 @@ The project implements a high-performance object detection pipeline that leverag
 ```bash
 git clone [repository-url]
 cd [repository-name]
+git submodule update --init --recursive
 ```
 
 2. Create and activate a virtual environment (recommended):
