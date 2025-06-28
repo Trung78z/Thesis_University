@@ -35,7 +35,7 @@ void STrack::activate(byte_kalman::KalmanFilter &kalman_filter, int frame_id)
 	_tlwh_tmp[2] = this->_tlwh[2];
 	_tlwh_tmp[3] = this->_tlwh[3];
 	vector<float> xyah = tlwh_to_xyah(_tlwh_tmp);
-	DETECTBOX xyah_box;
+	DetectBox xyah_box;
 	xyah_box[0] = xyah[0];
 	xyah_box[1] = xyah[1];
 	xyah_box[2] = xyah[2];
@@ -61,7 +61,7 @@ void STrack::activate(byte_kalman::KalmanFilter &kalman_filter, int frame_id)
 void STrack::re_activate(STrack &new_track, int frame_id, bool new_id)
 {
 	vector<float> xyah = tlwh_to_xyah(new_track.tlwh);
-	DETECTBOX xyah_box;
+	DetectBox xyah_box;
 	xyah_box[0] = xyah[0];
 	xyah_box[1] = xyah[1];
 	xyah_box[2] = xyah[2];
@@ -88,7 +88,7 @@ void STrack::update(STrack &new_track, int frame_id)
 	this->tracklet_len++;
 
 	vector<float> xyah = tlwh_to_xyah(new_track.tlwh);
-	DETECTBOX xyah_box;
+	DetectBox xyah_box;
 	xyah_box[0] = xyah[0];
 	xyah_box[1] = xyah[1];
 	xyah_box[2] = xyah[2];

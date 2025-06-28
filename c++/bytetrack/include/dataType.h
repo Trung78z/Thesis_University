@@ -5,8 +5,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
-typedef Eigen::Matrix<float, 1, 4, Eigen::RowMajor> DETECTBOX;
-typedef Eigen::Matrix<float, -1, 4, Eigen::RowMajor> DETECTBOXSS;
+typedef Eigen::Matrix<float, 1, 4, Eigen::RowMajor> DetectBox;
+typedef Eigen::Matrix<float, -1, 4, Eigen::RowMajor> DetectBoxss;
 typedef Eigen::Matrix<float, 1, 128, Eigen::RowMajor> FEATURE;
 typedef Eigen::Matrix<float, Eigen::Dynamic, 128, Eigen::RowMajor> FEATURESS;
 //typedef std::vector<FEATURE> FEATURESS;
@@ -21,7 +21,7 @@ using KAL_DATA = std::pair<KAL_MEAN, KAL_COVA>;
 using KAL_HDATA = std::pair<KAL_HMEAN, KAL_HCOVA>;
 
 //main
-using RESULT_DATA = std::pair<int, DETECTBOX>;
+using RESULT_DATA = std::pair<int, DetectBox>;
 
 //tracker:
 using TRACKER_DATA = std::pair<int, FEATURESS>;

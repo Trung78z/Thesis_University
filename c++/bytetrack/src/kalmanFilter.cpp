@@ -30,10 +30,10 @@ namespace byte_kalman
 		this->_std_weight_velocity = 1. / 160;
 	}
 
-	KAL_DATA KalmanFilter::initiate(const DETECTBOX &measurement)
+	KAL_DATA KalmanFilter::initiate(const DetectBox &measurement)
 	{
-		DETECTBOX mean_pos = measurement;
-		DETECTBOX mean_vel;
+		DetectBox mean_pos = measurement;
+		DetectBox mean_vel;
 		for (int i = 0; i < 4; i++) mean_vel(i) = 0;
 
 		KAL_MEAN mean;
@@ -60,12 +60,12 @@ namespace byte_kalman
 	void KalmanFilter::predict(KAL_MEAN &mean, KAL_COVA &covariance)
 	{
 		//revise the data;
-		DETECTBOX std_pos;
+		DetectBox std_pos;
 		std_pos << _std_weight_position * mean(3),
 			_std_weight_position * mean(3),
 			1e-2,
 			_std_weight_position * mean(3);
-		DETECTBOX std_vel;
+		DetectBox std_vel;
 		std_vel << _std_weight_velocity * mean(3),
 			_std_weight_velocity * mean(3),
 			1e-5,
@@ -85,7 +85,7 @@ namespace byte_kalman
 
 	KAL_HDATA KalmanFilter::project(const KAL_MEAN &mean, const KAL_COVA &covariance)
 	{
-		DETECTBOX std;
+		DetectBox std;
 		std << _std_weight_position * mean(3), _std_weight_position * mean(3),
 			1e-1, _std_weight_position * mean(3);
 		KAL_HMEAN mean1 = _update_mat * mean.transpose();
@@ -101,7 +101,7 @@ namespace byte_kalman
 		KalmanFilter::update(
 			const KAL_MEAN &mean,
 			const KAL_COVA &covariance,
-			const DETECTBOX &measurement)
+			const DetectBox &measurement)
 	{
 		KAL_HDATA pa = project(mean, covariance);
 		KAL_HMEAN projected_mean = pa.first;
@@ -126,7 +126,7 @@ namespace byte_kalman
 		KalmanFilter::gating_distance(
 			const KAL_MEAN &mean,
 			const KAL_COVA &covariance,
-			const std::vector<DETECTBOX> &measurements,
+			const std::vector<DetectBox> &measurements,
 			bool only_position)
 	{
 		KAL_HDATA pa = this->project(mean, covariance);
@@ -138,9 +138,9 @@ namespace byte_kalman
 		KAL_HCOVA covariance1 = pa.second;
 
 		//    Eigen::Matrix<float, -1, 4, Eigen::RowMajor> d(size, 4);
-		DETECTBOXSS d(measurements.size(), 4);
+		DetectBoxss d(measurements.size(), 4);
 		int pos = 0;
-		for (DETECTBOX box : measurements) {
+		for (DetectBox box : measurements) {
 			d.row(pos++) = box - mean1;
 		}
 		Eigen::Matrix<float, -1, -1, Eigen::RowMajor> factor = covariance1.llt().matrixL();

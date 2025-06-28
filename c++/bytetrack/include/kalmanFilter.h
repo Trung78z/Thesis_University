@@ -9,17 +9,17 @@ namespace byte_kalman
 	public:
 		static const double chi2inv95[10];
 		KalmanFilter();
-		KAL_DATA initiate(const DETECTBOX& measurement);
+		KAL_DATA initiate(const DetectBox& measurement);
 		void predict(KAL_MEAN& mean, KAL_COVA& covariance);
 		KAL_HDATA project(const KAL_MEAN& mean, const KAL_COVA& covariance);
 		KAL_DATA update(const KAL_MEAN& mean,
 			const KAL_COVA& covariance,
-			const DETECTBOX& measurement);
+			const DetectBox& measurement);
 
 		Eigen::Matrix<float, 1, -1> gating_distance(
 			const KAL_MEAN& mean,
 			const KAL_COVA& covariance,
-			const std::vector<DETECTBOX>& measurements,
+			const std::vector<DetectBox>& measurements,
 			bool only_position = false);
 
 	private:
