@@ -1,4 +1,4 @@
-
+# Loại trừ các file không nên tính vào ngôn ngữ chính
 *.md linguist-documentation
 *.ipynb linguist-generated
 *.json linguist-generated
@@ -6,15 +6,14 @@
 *.yaml linguist-generated
 *.txt linguist-documentation
 
-
-services/** linguist-vendored
-ros/** linguist-vendored
+# Loại trừ các thư mục không mang tính code chính
 vision_opencv/** linguist-vendored
-*.ipynb linguist-generated
-
+notebooks/** linguist-generated
 
 *.cpp linguist-detectable=true
 *.h linguist-detectable=true
 *.hpp linguist-detectable=true
 *.cu linguist-detectable=true
+
+# Nếu muốn vẫn tính Python là phụ (nếu có logic riêng trong .py)
 *.py linguist-detectable=true
