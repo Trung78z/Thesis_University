@@ -17,3 +17,4 @@ train*.ipynb linguist-generated
 *.h linguist-detectable=true
 *.hpp linguist-detectable=true
 *.cu linguist-detectable=true
+*.py linguist-detectable=true
