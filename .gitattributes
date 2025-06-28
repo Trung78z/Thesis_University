@@ -10,7 +10,7 @@
 services/** linguist-vendored
 ros/** linguist-vendored
 vision_opencv/** linguist-vendored
-train*.ipynb linguist-generated
+*.ipynb linguist-generated
 
 
 *.cpp linguist-detectable=true
