@@ -1,0 +1,19 @@
+
+*.md linguist-documentation
+*.ipynb linguist-generated
+*.json linguist-generated
+*.yml linguist-generated
+*.yaml linguist-generated
+*.txt linguist-documentation
+
+
+services/** linguist-vendored
+ros/** linguist-vendored
+vision_opencv/** linguist-vendored
+train*.ipynb linguist-generated
+
+
+*.cpp linguist-detectable=true
+*.h linguist-detectable=true
+*.hpp linguist-detectable=true
+*.cu linguist-detectable=true
