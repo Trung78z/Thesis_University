@@ -6,3 +6,6 @@ output.mp4
 build
 **/*.zip
 Makefile
+videos
+images
+bin

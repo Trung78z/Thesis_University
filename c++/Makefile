@@ -1,30 +1,30 @@
-# Makefile
-
-TARGET = detection
-ENGINE = models/model-23-06.engine
-INPUT  = test_video.mp4
-# INPUT  = /home/trung/Desktop/Thesis_University/services/tool/video/40xZVEFVBuE.mp4
-BUILD_DIR = build
+# Variables
+TARGET           := detection
+ENGINE           := models/model-28-6.engine
+VIDEO_INPUT      := videos/test_video.mp4
+BUILD_DIR        := build
+BIN_DIR          := bin
+CMAKE_BUILD_TYPE ?= Release
 
 # Default target
+.PHONY: all run build clean rebuild debug
+
+all: run
+
 run: build
-	@echo "Running $(TARGET)..."
-	@$(BUILD_DIR)/$(TARGET) $(ENGINE) $(INPUT) || echo "❌ Program failed"
+	@echo "🚀 Running $(TARGET) with video input..."
+	@$(BIN_DIR)/$(TARGET) --engine $(ENGINE) --video $(VIDEO_INPUT) || echo "❌ Program failed"
 
 build:
-	@echo "Building project with maximum optimization..."
-	@mkdir -p $(BUILD_DIR)
-	@cd $(BUILD_DIR) && \
-	cmake -DCMAKE_BUILD_TYPE=Release .. && make -j$(nproc)
-
-
-debug:
-	@echo "Building with debug symbols..."
-	@mkdir -p $(BUILD_DIR)
-	@cd $(BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug .. && make -j$(nproc)
-
-clean:
-	@echo "Cleaning build directory..."
-	@rm -rf $(BUILD_DIR)
+	@echo "🔧 Building project..."
+	@cmake -B $(BUILD_DIR) -S . -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
+	@cmake --build $(BUILD_DIR) --target $(TARGET) -- -j$(shell nproc)
 
 rebuild: clean build
+
+clean:
+	@echo "🧹 Cleaning build files..."
+	@rm -rf $(BUILD_DIR) $(BIN_DIR)
+
+debug:
+	@$(BIN_DIR)/$(TARGET) --help
