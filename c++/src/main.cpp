@@ -1,5 +1,4 @@
-﻿
-#include <BYTETracker.h>
+﻿#include <BYTETracker.h>
 #include <lanevision/LaneDetector.h>
 
 #include <cxxopts.hpp>
@@ -43,7 +42,7 @@ int main(int argc, char **argv) {
 
     auto result = options.parse(argc, argv);
 
-    // In hướng dẫn sử dụng nếu có --help
+    // Print usage instructions if --help is provided
     if (result.count("help")) {
       std::cout << options.help() << std::endl;
       return 0;
@@ -51,7 +50,7 @@ int main(int argc, char **argv) {
 
     std::string videoPath, imagePath, enginePath;
 
-    // Kiểm tra tham số bắt buộc
+    // Check required parameters
     if (result.count("engine")) {
       enginePath = result["engine"].as<std::string>();
     } else {
@@ -62,7 +61,7 @@ int main(int argc, char **argv) {
     if (result.count("video")) videoPath = result["video"].as<std::string>();
     if (result.count("images")) imagePath = result["images"].as<std::string>();
 
-    // Kiểm tra đúng 1 trong 2: --video hoặc --images
+    // Ensure only one of --video or --images is provided
     if (!videoPath.empty() && !imagePath.empty()) {
       std::cerr << "❌ Error: Please provide either --video or --images, not both.\n";
       return 1;
@@ -73,7 +72,7 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    // Nếu file là .onnx thì không chạy
+    // Do not run if the file is .onnx
     if (enginePath.find(".onnx") != std::string::npos) {
       std::cout << "ℹ️ ONNX model detected, skipping inference.\n";
       return 0;
@@ -83,7 +82,7 @@ int main(int argc, char **argv) {
     std::cout << "🔧 Loading engine from: " << enginePath << std::endl;
     Detect model(enginePath, logger);
 
-    // Chạy inference theo loại input
+    // Run inference based on input type
     if (!videoPath.empty()) {
       std::cout << "🎞️ Running video inference on: " << videoPath << std::endl;
       if (checkVideo(videoPath)) {
@@ -114,9 +113,9 @@ int main(int argc, char **argv) {
 }
 
 int runImages(vector<string> imagePathList, Detect model) {
-  // path to folder saves images
+  // Path to folder containing images
   for (const auto &imagePath : imagePathList) {
-    // open image
+    // Open image
     Mat image = imread(imagePath);
     if (image.empty()) {
       cerr << "Error reading image: " << imagePath << endl;
@@ -147,6 +146,7 @@ int runImages(vector<string> imagePathList, Detect model) {
 
 int runVideo(const string path, Detect model) {
   cout << "Opening video: " << path << endl;
+  // Example GStreamer pipeline for Jetson (commented out)
   // cv::VideoCapture('nvarguscamerasrc !
   // video/x-raw(memory:NVMM),width=1280,height=720,framerate=30/1 ! nvvidconv !
   // video/x-raw,format=BGRx ! videoconvert ! appsink', cv::CAP_GSTREAMER);
@@ -172,12 +172,10 @@ int runVideo(const string path, Detect model) {
 
   BYTETracker tracker(fps, 30);
   int frameCount = 0;
-  int frameCountSave = 0;
   auto fpsStartTime = std::chrono::steady_clock::now();
   int maxSpeed = -1;     // km/h
   int accMaxSpeed = 90;  // km/h
   int accSpeed = 60;     // km/h
-  bool saveImage = false;
   int total_ms = 0;
   LaneDetector laneDetector;
   while (true) {
@@ -190,18 +188,18 @@ int runVideo(const string path, Detect model) {
       break;
     }
     // Resize the image to fit the window
-    cv::resize(image, image, cv::Size(WIDTH, HEIGHT));
-    vector<Detection> objects;
+    // cv::resize(image, image, cv::Size(WIDTH, HEIGHT));
+    vector<Detection> res;
     const float ratio_h = model.getInputH() / (float)image.rows;
     const float ratio_w = model.getInputW() / (float)image.cols;
     model.preprocess(image);
 
     model.infer();
 
-    model.postprocess(objects);
+    model.postprocess(res);
 
-    std::vector<Object> objects2;
-    for (const auto &obj : objects) {
+    std::vector<Object> objects;
+    for (const auto &obj : res) {
       auto box = obj.bbox;
       auto class_id = obj.class_id;
       auto conf = obj.conf;
@@ -227,12 +225,12 @@ int runVideo(const string path, Detect model) {
 
       if (isTrackingClass(class_id)) {
         Object obj{box, class_id, conf};
-        objects2.push_back(obj);
+        objects.push_back(obj);
       }
     }
 
-    // track
-    std::vector<STrack> output_stracks = tracker.update(objects2);
+    // Tracking
+    std::vector<STrack> output_stracks = tracker.update(objects);
 
     auto end = std::chrono::system_clock::now();
     total_ms =
@@ -253,7 +251,7 @@ int runVideo(const string path, Detect model) {
     std::vector<cv::Vec4i> lanes = laneDetector.detectLanes(image);
 
     // Log detected objects
-    for (const auto &obj : objects) {
+    for (const auto &obj : res) {
       auto box = obj.bbox;
       auto class_id = obj.class_id;
       auto conf = obj.conf;
@@ -286,8 +284,7 @@ int runVideo(const string path, Detect model) {
         cv::Point laneTop((l0[0] + l1[0]) / 2, (l0[1] + l1[1]) / 2);
         cv::Point laneBottom((l0[2] + l1[2]) / 2, (l0[3] + l1[3]) / 2);
 
-        // Create a polygon for the lane area in order: top-left → top-right →
-        // bottom-right → bottom-left
+        // Create a polygon for the lane area in order: top-left → top-right → bottom-right → bottom-left
         std::vector<cv::Point> lane_area = {
             cv::Point(l0[0], l0[1]),  // top-left
             cv::Point(l1[0], l1[1]),  // top-right
@@ -300,7 +297,7 @@ int runVideo(const string path, Detect model) {
         {
           if (cv::pointPolygonTest(lane_area, bottom_center, false) >= 0)  // vehicle is in the lane
           {
-            // ① draw a dot at the center of the bbox
+            // Draw a dot at the center of the bbox
             cv::Point mid(box.x + box.width / 2,
                           box.y + box.height / 2);                 // bbox center
             cv::circle(image, mid, 5, cv::Scalar(0, 255, 0), -1);  // green dot
@@ -311,13 +308,12 @@ int runVideo(const string path, Detect model) {
       if (class_id >= 12 && class_id <= 17 && conf > 0.9) {
         // Save frame with speed limit sign
 
-        int newSpeed = (class_id - 9) * 10;  // class_id 12 -> 30km/h, 13 -> 40, v.v.
+        int newSpeed = (class_id - 9) * 10;  // class_id 12 -> 30km/h, 13 -> 40, etc.
         maxSpeed = newSpeed;
-        saveImage = true;
       }
     }
 
-    model.draw(image, objects);
+    model.draw(image, res);
 
     laneDetector.drawLanes(image, lanes);
     // FPS calculation
@@ -339,10 +335,9 @@ int runVideo(const string path, Detect model) {
     }
 
     // Draw Cruise Control
-
     cv::putText(image, cv::format("Max Cruise Control: %dKm/h", accMaxSpeed), cv::Point(10, 90),
                 cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 255, 255), 2);
-    // Draw over speed count
+    // Draw current speed
     cv::putText(image, cv::format("Control speed: %dKm/h", accSpeed), cv::Point(10, 120),
                 cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
     if (maxSpeed != -1) {
@@ -357,14 +352,9 @@ int runVideo(const string path, Detect model) {
     // Draw FPS
     cv::putText(image, cv::format("FPS: %.2f", fps), cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX,
                 0.7, cv::Scalar(0, 255, 0), 2);
-    if (saveImage) {
-      std::vector<int> params = {cv::IMWRITE_JPEG_QUALITY, 95};
-      cv::imwrite("images/" + std::to_string(frameCountSave) + ".jpg", image, params);
-    }
-    frameCountSave++;
-    saveImage = false;
+
     cv::imshow("Result", image);
-    if (cv::waitKey(1) == 'q') {  // Press ESC to exit
+    if (cv::waitKey(1) == 'q') {  // Press 'q' to exit
       break;
     }
   }

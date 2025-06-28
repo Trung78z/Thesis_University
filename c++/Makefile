@@ -1,7 +1,7 @@
 # Variables
 TARGET           := detection
 ENGINE           := models/model-28-6.engine
-VIDEO_INPUT      := videos/test_video.mp4
+VIDEO_INPUT      := videos/test_video_640x640.mp4
 BUILD_DIR        := build
 BIN_DIR          := bin
 CMAKE_BUILD_TYPE ?= Release

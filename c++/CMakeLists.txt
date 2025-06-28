@@ -17,8 +17,6 @@ include(FindTensorRTConfig)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-# Source files
-set(HEADERS src/preprocess.h)
 
 set(SOURCES src/main.cpp src/preprocess.cu src/utils.cpp)
 
@@ -57,7 +55,7 @@ target_include_directories(
          ${CMAKE_SOURCE_DIR}/include/tensorrt ${OpenCV_INCLUDE_DIRS})
 
 # Executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(
   ${PROJECT_NAME} PRIVATE acc ${OpenCV_LIBS} ${TensorRT_LIBRARIES}
                           ${CUDA_LIBRARIES} cudart bytetrack)
