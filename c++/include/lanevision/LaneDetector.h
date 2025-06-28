@@ -33,9 +33,9 @@ private:
         float fill_alpha = 0.3f;
         double slope_threshold = 0.4;
         int confidence_window = 5;
-        float roi_bottom_width = 0.85f;
-        float roi_top_width = 0.35f;
-        float roi_height = 0.65f;
+        float roi_bottom_width = 0.80f;
+        float roi_top_width = 0.08f;
+        float roi_height = 0.63f;
         float min_detection_confidence = 0.5f;
     } config_;
 

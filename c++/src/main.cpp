@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "Detect.h"
+#include "common/common.h"
 const int WIDTH = 1280;
 const int HEIGHT = 720;
 const int FPS = 30;
@@ -16,10 +17,11 @@ const int FPS = 30;
 std::vector<int> trackClasses{0, 1, 2, 3, 5, 7};  // person, bicycle, car, motorcycle, bus, truck
 
 bool isTrackingClass(int class_id) {
-  for (auto &c : trackClasses) {
-    if (class_id == c) return true;
-  }
-  return false;
+  return true;
+  // for (auto &c : trackClasses) {
+  //   if (class_id == c) return true;
+  // }
+  // return false;
 }
 
 /**
@@ -237,13 +239,22 @@ int runVideo(const string path, Detect model) {
         total_ms + std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
     for (int i = 0; i < output_stracks.size(); i++) {
+      std::ostringstream label_ss;
+      label_ss << CLASS_NAMES[output_stracks[i].class_id] << " " << std::fixed
+               << std::setprecision(2) << output_stracks[i].score;
+      std::string label = label_ss.str();
+      std::cout << "Track ID: " << output_stracks[i].track_id
+                << ", Class ID: " << output_stracks[i].class_id
+                << ", Score: " << output_stracks[i].score << ", TLWH: " << output_stracks[i].tlwh[0]
+                << ", " << output_stracks[i].tlwh[1] << ", " << output_stracks[i].tlwh[2] << ", "
+                << output_stracks[i].tlwh[3] << std::endl;
       std::vector<float> tlwh = output_stracks[i].tlwh;
       // bool vertical = tlwh[2] / tlwh[3] > 1.6;
       // if (tlwh[2] * tlwh[3] > 20 && !vertical)
       if (tlwh[2] * tlwh[3] > 20) {
         cv::Scalar s = tracker.get_color(output_stracks[i].track_id);
-        cv::putText(image, cv::format("%d", output_stracks[i].track_id),
-                    cv::Point(tlwh[0], tlwh[1] - 5), 0, 0.6, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+        cv::putText(image, cv::format("%d. %s", output_stracks[i].track_id, label.c_str()),
+            cv::Point(tlwh[0], tlwh[1] - 5), 0, 0.6, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
         cv::rectangle(image, cv::Rect(tlwh[0], tlwh[1], tlwh[2], tlwh[3]), s, 2);
       }
     }
@@ -284,7 +295,8 @@ int runVideo(const string path, Detect model) {
         cv::Point laneTop((l0[0] + l1[0]) / 2, (l0[1] + l1[1]) / 2);
         cv::Point laneBottom((l0[2] + l1[2]) / 2, (l0[3] + l1[3]) / 2);
 
-        // Create a polygon for the lane area in order: top-left → top-right → bottom-right → bottom-left
+        // Create a polygon for the lane area in order: top-left → top-right → bottom-right →
+        // bottom-left
         std::vector<cv::Point> lane_area = {
             cv::Point(l0[0], l0[1]),  // top-left
             cv::Point(l1[0], l1[1]),  // top-right
@@ -313,7 +325,7 @@ int runVideo(const string path, Detect model) {
       }
     }
 
-    model.draw(image, res);
+    // model.draw(image, res);
 
     laneDetector.drawLanes(image, lanes);
     // FPS calculation

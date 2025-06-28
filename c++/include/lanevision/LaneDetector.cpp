@@ -113,12 +113,6 @@ void LaneDetector::drawLanes(cv::Mat &frame, const std::vector<cv::Vec4i> &lines
         if (pts.size() == 4)
         {
             std::vector<cv::Point> poly = {pts[0], pts[1], pts[3], pts[2]}; // Reorder for correct polygon
-            // std::cout << "Data: "
-            //           << "(" << pts[0].x << "," << pts[0].y << "), "
-            //           << "(" << pts[1].x << "," << pts[1].y << "), "
-            //           << "(" << pts[3].x << "," << pts[3].y << "), "
-            //           << "(" << pts[2].x << "," << pts[2].y << ")"
-            //           << std::endl;
             cv::fillPoly(overlay, std::vector<std::vector<cv::Point>>{poly}, config_.fill_color);
         }
     }

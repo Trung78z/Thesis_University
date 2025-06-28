@@ -1,10 +1,11 @@
 #include "STrack.h"
 
-STrack::STrack(vector<float> tlwh_, float score)
+STrack::STrack(vector<float> tlwh_, float score, int class_id)
 {
 	_tlwh.resize(4);
 	_tlwh.assign(tlwh_.begin(), tlwh_.end());
 
+	this->class_id = class_id;
 	is_activated = false;
 	track_id = 0;
 	state = TrackState::New;
@@ -69,6 +70,7 @@ void STrack::re_activate(STrack &new_track, int frame_id, bool new_id)
 	auto mc = this->kalman_filter.update(this->mean, this->covariance, xyah_box);
 	this->mean = mc.first;
 	this->covariance = mc.second;
+	this->class_id = new_track.class_id;
 
 	static_tlwh();
 	static_tlbr();
@@ -93,7 +95,7 @@ void STrack::update(STrack &new_track, int frame_id)
 	xyah_box[1] = xyah[1];
 	xyah_box[2] = xyah[2];
 	xyah_box[3] = xyah[3];
-
+	this->class_id = new_track.class_id;
 	auto mc = this->kalman_filter.update(this->mean, this->covariance, xyah_box);
 	this->mean = mc.first;
 	this->covariance = mc.second;
