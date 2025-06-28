@@ -6,28 +6,34 @@
 #include <iostream>
 #include <vector>
 
+const int WIDTH = 1280;
+const int HEIGHT = 720;
+const int FPS = 30;
+
+const int focal_length = 1500;  // Example focal length, adjust as needed
+
 const std::vector<std::string> CLASS_NAMES = {
-    "person",                    // 0
-    "bicycle",                   // 1
-    "car",                       // 2
-    "motorcycle",                // 3
-    "bus",                       // 4
-    "truck",                     // 5
-    "stop sign",                // 6
-    "other-vehicle",             // 7
-    "crosswalk",                 // 8
-    "red light",                 // 9
-    "yellow light",              // 10
-    "green light",               // 11
-    "Speed limit 30km-h",        // 12
-    "Speed limit 40km-h",        // 13
-    "Speed limit 50km-h",        // 14
-    "Speed limit 60km-h",        // 15
-    "Speed limit 70km-h",        // 16
-    "Speed limit 80km-h",        // 17
-    "End of speed limit 60km-h", // 18
-    "End of speed limit 70km-h", // 19
-    "End of speed limit 80km-h"  // 20
+    "person",                     // 0
+    "bicycle",                    // 1
+    "car",                        // 2
+    "motorcycle",                 // 3
+    "bus",                        // 4
+    "truck",                      // 5
+    "stop sign",                  // 6
+    "other-vehicle",              // 7
+    "crosswalk",                  // 8
+    "red light",                  // 9
+    "yellow light",               // 10
+    "green light",                // 11
+    "Speed limit 30km-h",         // 12
+    "Speed limit 40km-h",         // 13
+    "Speed limit 50km-h",         // 14
+    "Speed limit 60km-h",         // 15
+    "Speed limit 70km-h",         // 16
+    "Speed limit 80km-h",         // 17
+    "End of speed limit 60km-h",  // 18
+    "End of speed limit 70km-h",  // 19
+    "End of speed limit 80km-h"   // 20
 };
 
 const std::vector<std::vector<unsigned int>> COLORS = {

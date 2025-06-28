@@ -17,8 +17,7 @@ include(FindTensorRTConfig)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-
-set(SOURCES src/main.cpp src/preprocess.cu src/utils.cpp)
+set(SOURCES src/main.cpp src/preprocess.cu src/utils.cpp src/process.cpp)
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/Detect.cpp")
   list(APPEND SOURCES src/Detect.cpp)
