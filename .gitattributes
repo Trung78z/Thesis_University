@@ -6,7 +6,6 @@
 *.yaml linguist-generated
 *.txt linguist-documentation
 
-# Loại trừ các thư mục không mang tính code chính
 vision_opencv/** linguist-vendored
 notebooks/** linguist-generated
 
@@ -15,5 +14,4 @@ notebooks/** linguist-generated
 *.hpp linguist-detectable=true
 *.cu linguist-detectable=true
 
-# Nếu muốn vẫn tính Python là phụ (nếu có logic riêng trong .py)
 *.py linguist-detectable=true
