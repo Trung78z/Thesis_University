@@ -6,7 +6,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "common/common.h"
+#include "common/config.h"
 #include "common/cuda_utils.h"
 #include "common/macros.h"
 #include "preprocess.h"
@@ -26,22 +26,8 @@ Detect::Detect(string model_path, nvinfer1::ILogger &logger) {
         saveEngine(model_path);
     }
 
-#if NV_TENSORRT_MAJOR < 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR < 5)
-    // // For TensorRT < 8.5, use getBindingDimensions
-    auto input_dims = engine->getBindingDimensions(0);
-    input_h = input_dims.d[2];
-    input_w = input_dims.d[3];
-    cout << "Input dimensions: " << input_h << "x" << input_w << std::endl;
-    std::cout << "TensorRT version is lower than 8.5, using getBindingDimensions." << std::endl;
-#else
-    // For TensorRT >= 8.5, use getIOTensorName and getTensorShape
-    auto input_dims = engine->getTensorShape(engine->getIOTensorName(0));
-    input_h = input_dims.d[2];
-    input_w = input_dims.d[3];
-    cout << "Input dimensions: " << input_h << "x" << input_w << std::endl;
-    std::cout << "TensorRT version is 8.5 or higher, using getIOTensorName and getTensorShape."
-              << std::endl;
-#endif
+    std::cout << "Input dimensions: " << input_h << "x" << input_w << std::endl;
+    std::cout << "TensorRT version: " << NV_TENSORRT_MAJOR << "." << NV_TENSORRT_MINOR << std::endl;
 }
 
 void Detect::init(std::string engine_path, nvinfer1::ILogger &logger) {
@@ -291,19 +277,23 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
                 distance_estimator.estimate(pixel_distance, focal_length, real_object_width);
 
             std::ostringstream ss;
-            ss << std::fixed << std::setprecision(2) << distance << " m";
+            ss << std::fixed << std::setprecision(2) << distance << "m";
+
+            // Smaller font for distance text
             cv::putText(image, ss.str(), cv::Point(box.x + 2, box.y - 20), cv::FONT_HERSHEY_SIMPLEX,
-                        0.6, cv::Scalar(255, 255, 255), 2, cv::LINE_AA);
+                        0.4, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
         }
 
-        // Prepare and draw label
+        // Prepare and draw label with smaller font
         std::ostringstream label_ss;
         label_ss << detection.track_id << ". " << CLASS_NAMES[class_id] << " " << std::fixed
                  << std::setprecision(2) << conf;
 
         std::string label = label_ss.str();
-        cv::putText(image, label, cv::Point(box.x + 2, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.6,
-                    cv::Scalar(0, 255, 255), 2, cv::LINE_AA);
+
+        // Smaller font for main label
+        cv::putText(image, label, cv::Point(box.x + 2, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.4,
+                    cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
     }
 }
 

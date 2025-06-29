@@ -190,7 +190,7 @@ int runVideo(const string path, Detect model) {
                 }
             }
 
-            if (class_id >= 12 && class_id <= 17 && conf > 0.9) {
+            if (class_id >= 12 && class_id <= 17 && conf > 0.6) {
                 int newSpeed = (class_id - 9) * 10;  // class_id 12 -> 30km/h, 13 -> 40, etc.
                 maxSpeed = newSpeed;
             }

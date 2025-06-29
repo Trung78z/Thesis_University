@@ -20,7 +20,7 @@
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 // =============================================================================
 
-#include "lanevision/LaneDetector.h"
+#include "LaneDetector.h"
 
 #include <algorithm>
 #include <numeric>

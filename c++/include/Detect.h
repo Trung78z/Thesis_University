@@ -72,16 +72,16 @@ class Detect {
     int input_h;                   // Input image height expected by the model
     int num_detections;            // Number of detections output by the model
     int detection_attribute_size;  // Attributes (e.g., bbox, class) per detection
-    int num_classes = 80;          // Number of classes (e.g., COCO dataset has 80 classes)
+    int num_classes = 21;          // Number of classes (e.g., COCO dataset has 80 classes)
 
     // Maximum supported image size (used for memory allocation checks)
     const int MAX_IMAGE_SIZE = 4096 * 4096;
 
     // Confidence threshold for filtering detections
-    float conf_threshold = 0.6f;
+    float conf_threshold = 0.5f;
 
     // Non-Maximum Suppression (NMS) threshold to remove duplicate boxes
-    float nms_threshold = 0.6f;
+    float nms_threshold = 0.5f;
 
     // Colors for drawing bounding boxes for each class
     vector<Scalar> colors;
