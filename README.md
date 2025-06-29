@@ -1,30 +1,63 @@
-# Real-time Object Detection using YOLOv11 and TensorRT
+# Real-time Object Detection and Lane Detection using YOLOv11 and TensorRT
 
-This repository contains the implementation of a real-time object detection system using YOLOv11 and TensorRT for optimized inference. This project is part of a thesis focusing on efficient deep learning deployment for real-time applications.
+This repository contains the implementation of a comprehensive real-time computer vision system for autonomous driving applications. The project combines object detection, lane detection, and object tracking using YOLOv11, TensorRT, and ByteTrack.
 
 ## Overview
 
-The project implements a high-performance object detection pipeline that leverages:
-- YOLOv11 for state-of-the-art object detection
-- NVIDIA TensorRT for optimized inference
-- CUDA acceleration for GPU-based processing
-- Real-time video processing capabilities
+The project implements a multi-modal computer vision pipeline that leverages:
+- **YOLOv11** for state-of-the-art object detection
+- **NVIDIA TensorRT** for optimized inference
+- **ByteTrack** for robust object tracking
+- **OpenCV-based lane detection** for road lane identification
+- **CUDA acceleration** for GPU-based processing
+- **ROS integration** for robotic applications
 
 ## Features
 
-- YOLOv11 model integration with TensorRT optimization
-- Real-time object detection on video streams
-- Support for multiple input sources (video files, webcam, RTSP streams)
-- Performance benchmarking tools
-- Easy-to-use inference pipeline
-- Configurable detection parameters
+- **Multi-modal Detection**: Object detection, lane detection, and distance estimation
+- **Real-time Performance**: Optimized for real-time video processing
+- **Object Tracking**: ByteTrack integration for persistent object tracking
+- **Multiple Input Sources**: Support for video files, webcam, and RTSP streams
+- **Cross-platform**: C++ implementation with Python services
+- **ROS Integration**: Ready for robotic applications
+- **Performance Monitoring**: Built-in performance benchmarking tools
+
+## Project Structure
+
+```
+├── c++/                    # Main C++ implementation
+│   ├── src/               # Source code
+│   │   ├── main.cpp       # Main application entry point
+│   │   ├── Detect.cpp     # YOLOv11 detection implementation
+│   │   ├── process.cpp    # Video/image processing pipeline
+│   │   └── preprocess.cu  # CUDA preprocessing kernels
+│   ├── include/           # Header files
+│   │   ├── Detect.h       # Detection class interface
+│   │   ├── lanevision/    # Lane detection module
+│   │   ├── followdist/    # Distance estimation
+│   │   └── tensorrt/      # TensorRT utilities
+│   ├── models/            # Pre-trained models
+│   ├── bin/               # Compiled executables
+│   └── CMakeLists.txt     # Build configuration
+├── services/              # Python services
+│   ├── models/            # Python model files
+│   ├── prediction/        # Prediction services
+│   └── requirements.txt   # Python dependencies
+├── ros/                   # ROS package
+│   ├── src/              # ROS nodes
+│   └── package.xml       # ROS package configuration
+├── notebooks/             # Training notebooks
+│   ├── train.ipynb       # YOLOv11 training workflow
+│   └── thesis-train-all.ipynb
+└── vision_opencv/         # OpenCV vision utilities
+```
 
 ## Requirements
 
 ### Hardware Requirements
 - NVIDIA GPU with CUDA support (Compute Capability 7.0 or higher)
-- Minimum 8GB GPU memory recommended
-- Sufficient system RAM (16GB or more recommended)
+- Minimum 4GB GPU memory (8GB recommended)
+- Sufficient system RAM (8GB or more)
 
 ### Software Requirements
 - Ubuntu 20.04 or later
@@ -32,229 +65,224 @@ The project implements a high-performance object detection pipeline that leverag
 - cuDNN 8.6 or later
 - TensorRT 8.6 or later
 - Python 3.8 or later
+- OpenCV 4.5 or later
+- CMake 3.10 or later
 
 ## Installation
 
-1. Clone the repository:
+### 1. Clone the Repository
 ```bash
 git clone [repository-url]
-cd [repository-name]
+cd Thesis_University
 git submodule update --init --recursive
 ```
 
-2. Create and activate a virtual environment (recommended):
+### 2. Install System Dependencies
 ```bash
-python -m venv venv
-source venv/bin/activate
+sudo apt-get update
+sudo apt-get install libspdlog-dev libfmt-dev
+sudo apt-get install libcanberra-gtk-module libcanberra-gtk3-module
 ```
 
-3. Install the required packages:
+### 3. Set up CUDA Environment
 ```bash
+export CUDA_HOME=/usr/local/cuda
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+```
+
+### 4. Build C++ Implementation
+```bash
+cd c++
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+```
+
+### 5. Install Python Dependencies
+```bash
+cd ../services
+python3 -m venv .env --system-site-packages
+source .env/bin/activate
 pip install -r requirements.txt
-```
-
-4. Install TensorRT (follow NVIDIA's official documentation for your specific system)
-
-## Project Structure
-
-```
-├── models/              # Pre-trained models and model configurations
-├── src/                 # Source code
-│   ├── inference/      # Inference pipeline implementation
-│   ├── utils/          # Utility functions
-│   └── visualization/  # Visualization tools
-├── data/               # Dataset and sample videos
-├── scripts/            # Helper scripts
-├── tests/              # Unit tests
-├── test_images/        # Test images for evaluation
-│   ├── day/           # Daytime test images
-│   ├── night/         # Night test images
-│   └── challenging/   # Challenging scenarios
-├── tools/              # Testing and visualization tools
-│   ├── monitor.py     # Real-time performance monitor
-│   └── visualize_metrics.py  # Metrics visualization
-└── requirements.txt    # Python dependencies
 ```
 
 ## Usage
 
-### Basic Inference
+### C++ Implementation
 
+#### Basic Object Detection
+```bash
+# Run detection on video
+./bin/detection --engine models/best.engine --video path/to/video.mp4
+
+# Run detection on images
+./bin/detection --engine models/best.engine --images path/to/images/
+```
+
+#### Model Conversion
+```bash
+# Convert ONNX to TensorRT engine
+/usr/src/tensorrt/bin/trtexec --onnx=best.onnx --saveEngine=best.engine --fp16
+
+# Export YOLO model to ONNX
+yolo export model=best.pt format=onnx dynamic=False opset=11
+```
+
+### Python Services
+
+#### Training YOLOv11 Model
 ```python
-from src.inference.detector import ObjectDetector
+from ultralytics import YOLO
 
-# Initialize detector
-detector = ObjectDetector(
-    model_path="models/yolov11n.engine",
-    conf_threshold=0.5,
-    iou_threshold=0.45
-)
+# Load pretrained model
+model = YOLO("yolo11n.pt")
 
-# Run inference on video
-detector.process_video(
-    source="path/to/video.mp4",
-    output_path="output.mp4",
-    show=True
+# Train on custom dataset
+model.train(
+    data="data.yaml",
+    epochs=100,
+    imgsz=640,
+    batch=16,
+    optimizer="auto",
+    lr0=0.005
 )
 ```
 
-### Real-time Webcam Detection
-
+#### Inference Service
 ```python
-from src.inference.detector import ObjectDetector
+# Load trained model
+model = YOLO('best.pt')
 
-detector = ObjectDetector("models/yolov11n.engine")
-detector.process_video(source=0)  # 0 for default webcam
+# Run inference
+results = model('path/to/image.jpg')
 ```
 
-## Model Conversion
-
-To convert YOLOv11 models to TensorRT format:
+### ROS Integration
 
 ```bash
-python scripts/convert_to_tensorrt.py \
-    --weights models/yolov11n.pt \
-    --engine models/yolov11n.engine \
-    --precision fp16
+# Build ROS package
+cd ros
+catkin_make
+
+# Launch the system
+roslaunch thesis thesis.launch
 ```
+
+## Model Information
+
+### Supported Classes
+The system detects 80 COCO classes including:
+- **Vehicles**: car, truck, bus, motorcycle, bicycle
+- **Traffic Objects**: traffic light, stop sign, parking meter
+- **Pedestrians**: person
+- **Animals**: Various animals (cat, dog, horse, etc.)
+- **Objects**: Various everyday objects
+
+### Model Variants
+- **YOLOv11n**: Nano model (~2.6M parameters, ~6.5 GFLOPs)
+- **YOLOv11s**: Small model
+- **YOLOv11m**: Medium model
+- **YOLOv11l**: Large model
 
 ## Performance
 
-The system achieves real-time performance with the following metrics (on NVIDIA RTX 3080):
-- YOLOv11n: ~120 FPS
-- YOLOv11s: ~75 FPS
-- YOLOv11m: ~50 FPS
-- YOLOv11l: ~35 FPS
+### Inference Speed (NVIDIA GTX 1650)
+| Model    | Resolution | Batch | FP16 | FPS  | Latency (ms) |
+|----------|------------|-------|------|------|--------------|
+| YOLOv11n | 640x640    | 8     | Yes  | 45   | 22.2        |
+| YOLOv11n | 640x640    | 8     | No   | 35   | 28.6        |
+| YOLOv11s | 640x640    | 4     | Yes  | 25   | 40.0        |
 
-## Performance Optimization
-
-### GTX 1650 Optimization Guidelines
-1. Model Optimization:
-   - Use FP16 precision for inference
-   - Enable TensorRT optimization
-   - Use batch size of 8 for YOLOv11n, 4 for YOLOv11s
-   - Input resolution: 640x640 for optimal speed/accuracy trade-off
-   - Enable CUDA graph optimization
-   - Use TensorRT's dynamic shape optimization
-
-2. System Optimization:
-   - Set GPU to maximum performance mode: `sudo nvidia-smi -pm 1`
-   - Disable desktop effects: `gsettings set org.gnome.desktop.animations enabled false`
-   - Set CPU governor to performance: `sudo cpufreq-set -g performance`
-   - Monitor GPU temperature: `nvidia-smi -q -d temperature`
-
-3. Memory Management:
-   - Pre-allocate GPU memory
-   - Use pinned memory for host-device transfers
-   - Implement memory pooling
-   - Monitor VRAM usage: `nvidia-smi -l 1`
-
-## Testing and Evaluation
-
-### Test Images
-The repository includes a set of test images in the `test_images/` directory:
-```
-test_images/
-├── day/
-│   ├── highway_1.jpg
-│   ├── city_1.jpg
-│   └── rural_1.jpg
-├── night/
-│   ├── highway_1.jpg
-│   ├── city_1.jpg
-│   └── rural_1.jpg
-└── challenging/
-    ├── low_light_1.jpg
-    ├── occluded_1.jpg
-    └── small_objects_1.jpg
-```
-
-### Running Tests
-```bash
-# Run inference on test images
-./build/inference_test --model models/yolov11n.engine \
-                      --images test_images/ \
-                      --conf 0.25 \
-                      --iou 0.45 \
-                      --batch 8 \
-                      --fp16
-
-# Run benchmark
-./build/benchmark --model models/yolov11n.engine \
-                 --iterations 1000 \
-                 --warmup 100 \
-                 --batch 8 \
-                 --fp16
-```
-
-### Performance Metrics
-
-#### Inference Speed (GTX 1650)
-| Model    | Resolution | Batch | FP16 | FPS  | Latency (ms) | mAP@0.5 |
-|----------|------------|-------|------|------|--------------|---------|
-| YOLOv11n | 640x640    | 8     | Yes  | 45   | 22.2        | 0.78    |
-| YOLOv11n | 640x640    | 8     | No   | 35   | 28.6        | 0.78    |
-| YOLOv11s | 640x640    | 4     | Yes  | 25   | 40.0        | 0.82    |
-| YOLOv11s | 640x640    | 4     | No   | 18   | 55.6        | 0.82    |
-
-#### Memory Usage (GTX 1650)
+### Memory Usage
 | Model    | Batch | FP16 | VRAM (MB) | CPU RAM (MB) |
 |----------|-------|------|-----------|--------------|
 | YOLOv11n | 8     | Yes  | 1800      | 1200         |
-| YOLOv11n | 8     | No   | 2800      | 1200         |
 | YOLOv11s | 4     | Yes  | 2200      | 1500         |
-| YOLOv11s | 4     | No   | 3200      | 1500         |
 
-### Visualization Tools
+## Advanced Features
 
-1. Real-time Performance Monitor:
+### Lane Detection
+The system includes a robust lane detection module using:
+- Canny edge detection
+- Hough line transform
+- Region of interest (ROI) filtering
+- Lane line fitting and smoothing
+- Confidence-based filtering
+
+### Object Tracking
+ByteTrack integration provides:
+- Persistent object tracking across frames
+- Occlusion handling
+- Motion prediction
+- Track management
+
+### Distance Estimation
+Front distance estimation using:
+- Camera calibration
+- Object size priors
+- Focal length calculations
+
+## Development
+
+### Training Custom Models
+1. Prepare dataset in YOLO format
+2. Create `data.yaml` configuration
+3. Use the provided Jupyter notebooks for training
+4. Export to ONNX format
+5. Convert to TensorRT engine
+
+### Adding New Features
+- Extend the `Detect` class for new detection types
+- Add new preprocessing kernels in `preprocess.cu`
+- Implement new ROS nodes for additional functionality
+
+## Testing
+
+### Test Images
+The system includes test images for evaluation:
+```
+test_images/
+├── day/           # Daytime scenarios
+├── night/         # Night scenarios
+└── challenging/   # Challenging conditions
+```
+
+### Performance Testing
 ```bash
-# Monitor GPU usage and performance
-./tools/monitor.py --model models/yolov11n.engine \
-                  --source 0 \
-                  --show-fps \
-                  --show-memory \
-                  --show-latency
+# Run benchmark
+./bin/detection --engine models/best.engine \
+                --images test_images/ \
+                --conf 0.25 \
+                --iou 0.45
 ```
 
-2. Results Visualization:
-```bash
-# Generate performance plots
-./tools/visualize_metrics.py --results results/benchmark.json \
-                            --output plots/ \
-                            --show
-```
+## Troubleshooting
 
-### Sample Test Results
+### Common Issues
+1. **CUDA Memory Errors**: Reduce batch size or input resolution
+2. **TensorRT Version Mismatch**: Ensure TensorRT version compatibility
+3. **Model Loading Errors**: Check engine file path and format
+4. **Performance Issues**: Enable FP16, adjust batch size, check GPU utilization
 
-1. Daytime Highway Scene:
-```
-Model: YOLOv11n
-Resolution: 640x640
-FPS: 45
-Objects detected: 12
-Average confidence: 0.85
-Processing time: 22.2ms
-Memory usage: 1.8GB
-```
+### Performance Optimization
+1. **GPU Optimization**:
+   ```bash
+   sudo nvidia-smi -pm 1  # Set maximum performance mode
+   sudo cpufreq-set -g performance  # Set CPU governor
+   ```
 
-2. Night City Scene:
-```
-Model: YOLOv11n
-Resolution: 640x640
-FPS: 42
-Objects detected: 8
-Average confidence: 0.82
-Processing time: 23.8ms
-Memory usage: 1.8GB
-```
+2. **System Optimization**:
+   ```bash
+   gsettings set org.gnome.desktop.animations enabled false
+   ```
 
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create your feature branch (`git checkout -b feature/NewFeature`)
+3. Commit your changes (`git commit -m 'Add NewFeature'`)
+4. Push to the branch (`git push origin feature/NewFeature`)
 5. Open a Pull Request
 
 ## License
@@ -263,12 +291,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- [YOLOv11](https://github.com/your-yolov11-repo)
+- [Ultralytics YOLOv11](https://github.com/ultralytics/ultralytics)
 - [NVIDIA TensorRT](https://developer.nvidia.com/tensorrt)
-- [NVIDIA CUDA](https://developer.nvidia.com/cuda-zone)
+- [ByteTrack](https://github.com/ifzhang/ByteTrack)
+- [OpenCV](https://opencv.org/)
 
 ## Contact
 
-[Your Name] - [Your Email]
+For questions and support, please open an issue on GitHub.
 
-Project Link: [https://github.com/yourusername/repository-name]
+Project Link: [https://github.com/yourusername/Thesis_University]
