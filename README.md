@@ -72,7 +72,7 @@ The project implements a multi-modal computer vision pipeline that leverages:
 
 ### 1. Clone the Repository
 ```bash
-git clone [repository-url]
+git clone https://github.com/Trung78z/Thesis_University.git
 cd Thesis_University
 git submodule update --init --recursive
 ```
@@ -300,4 +300,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For questions and support, please open an issue on GitHub.
 
-Project Link: [https://github.com/yourusername/Thesis_University]
+Project Link: [https://github.com/Trung78z/Thesis_University]
