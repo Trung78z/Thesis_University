@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "Detect.h"
-#include "common/config.h"
+#include "config.h"
 
 bool isTrackingClass(int class_id);
 int runVideo(const string path, Detect model);

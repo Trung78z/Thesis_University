@@ -1,16 +1,16 @@
 #include "Detect.h"
 
+#include <FrontDistanceEstimator.h>
 #include <NvOnnxParser.h>
-#include <followdist/FrontDistanceEstimator.h>
 
 #include <fstream>
 #include <iostream>
 
-#include "common/config.h"
-#include "common/cuda_utils.h"
-#include "common/macros.h"
+#include "config.h"
+#include "cuda_utils.h"
+#include "logging.h"
+#include "macros.h"
 #include "preprocess.h"
-#include "tensorrt/logging.h"
 static Logger logger;
 #define isFP16 true
 #define warmup true
@@ -264,7 +264,8 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
         int class_id = detection.class_id;
         float conf = detection.score;
 
-        cv::Scalar color(Config::COLORS[class_id][0], Config::COLORS[class_id][1], Config::COLORS[class_id][2]);
+        cv::Scalar color(Config::COLORS[class_id][0], Config::COLORS[class_id][1],
+                         Config::COLORS[class_id][2]);
 
         // Draw rectangle
         cv::rectangle(image, box, color, 2);
@@ -273,8 +274,8 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
         if (class_id == 2 || class_id == 4 || class_id == 5) {
             double real_object_width = (class_id == 2) ? 0.7 : 1.0;
             double pixel_distance = box.width;
-            double distance =
-                distance_estimator.estimate(pixel_distance, Config::FOCAL_LENGTH, real_object_width);
+            double distance = distance_estimator.estimate(pixel_distance, Config::FOCAL_LENGTH,
+                                                          real_object_width);
 
             std::ostringstream ss;
             ss << std::fixed << std::setprecision(2) << distance << "m";

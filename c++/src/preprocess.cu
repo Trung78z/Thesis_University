@@ -1,5 +1,5 @@
 #include "preprocess.h"
-#include "common/cuda_utils.h"
+#include "cuda_utils.h"
 #include "device_launch_parameters.h"
 #include <iostream>
 

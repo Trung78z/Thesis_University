@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
                 return runVideo(videoPath, model);
             } else {
                 std::cerr << "❌ Invalid video path.\n";
-                return 1;
+                return 0;
             }
         }
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
                 return runImages(imageList, model);
             } else {
                 std::cerr << "❌ No valid images found in: " << imagePath << std::endl;
-                return 1;
+                return 0;
             }
         }
 

@@ -17,10 +17,28 @@ include(FindTensorRTConfig)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-set(SOURCES src/main.cpp src/preprocess.cu src/utils.cpp src/process.cpp)
+# Gather all cpp/cu files EXCEPT main.cpp and test.cpp
+file(GLOB_RECURSE ALL_SOURCES src/*.cpp src/*.cu)
+
+# Define entry points
+set(MAIN_ENTRY src/main.cpp)
+set(TEST_ENTRY tests/test.cpp)
+
+# Remove entry points from shared sources more explicitly
+list(REMOVE_ITEM ALL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/${MAIN_ENTRY}
+     ${MAIN_ENTRY})
+set(SHARED_SOURCES ${ALL_SOURCES})
+
+# Debug: Print what's in SHARED_SOURCES to verify
+message(STATUS "SHARED_SOURCES contains: ${SHARED_SOURCES}")
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/Detect.cpp")
-  list(APPEND SOURCES src/Detect.cpp)
+  # Only add if not already in SHARED_SOURCES
+  list(FIND SHARED_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Detect.cpp"
+       DETECT_FOUND)
+  if(DETECT_FOUND EQUAL -1)
+    list(APPEND SHARED_SOURCES src/Detect.cpp)
+  endif()
 else()
   message(WARNING "src/Detect.cpp not found. Please check your sources.")
 endif()
@@ -32,41 +50,34 @@ add_library(bytetrack SHARED ${SRCS01})
 target_link_libraries(bytetrack cudart nvinfer ${OpenCV_LIBS})
 
 # Static library with CUDA support
-file(
-  GLOB
-  LIB_SOURCES
-  CONFIGURE_DEPENDS
-  "${CMAKE_SOURCE_DIR}/include/*.cpp"
-  "${CMAKE_SOURCE_DIR}/include/*.h"
-  "${CMAKE_SOURCE_DIR}/include/lanevision/*.cpp"
-  "${CMAKE_SOURCE_DIR}/include/lanevision/*.h"
-  "${CMAKE_SOURCE_DIR}/include/followdist/*.cpp"
-  "${CMAKE_SOURCE_DIR}/include/followdist/*.h"
-  "${CMAKE_SOURCE_DIR}/include/tensorrt/*.cpp"
-  "${CMAKE_SOURCE_DIR}/include/tensorrt/*.h")
+file(GLOB LIB_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/include/*.h"
+     "${CMAKE_SOURCE_DIR}/include/*.hpp")
 
-# CUDA-enabled static lib
-add_library(acc STATIC ${LIB_SOURCES})
-target_include_directories(
-  acc
-  PUBLIC ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/include/lanevision
-         ${CMAKE_SOURCE_DIR}/include/followdist
-         ${CMAKE_SOURCE_DIR}/include/tensorrt ${OpenCV_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
 
-# Executable
-add_executable(${PROJECT_NAME} ${SOURCES})
+# Main executable
+add_executable(${PROJECT_NAME} ${MAIN_ENTRY} ${SHARED_SOURCES})
 target_link_libraries(
-  ${PROJECT_NAME} PRIVATE acc ${OpenCV_LIBS} ${TensorRT_LIBRARIES}
+  ${PROJECT_NAME} PRIVATE ${OpenCV_LIBS} ${TensorRT_LIBRARIES}
                           ${CUDA_LIBRARIES} cudart bytetrack)
-
 set_target_properties(
   ${PROJECT_NAME}
   PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH_LIST}"
              BUILD_RPATH
              "\$ORIGIN;${TensorRT_LIB_DIR};${CUDA_TOOLKIT_ROOT_DIR}/lib64"
              INSTALL_RPATH
-             "\$ORIGIN;${TensorRT_LIB_DIR};${CUDA_TOOLKIT_ROOT_DIR}/lib64")
+             "\$ORIGIN;${TensorRT_LIB_DIR};${CUDA_TOOLKIT_ROOT_DIR}/lib64"
+             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-# Set output directory for 'main' binary
-set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-                                                 ${CMAKE_SOURCE_DIR}/bin)
+# Test executable
+add_executable(test ${TEST_ENTRY} ${SHARED_SOURCES})
+target_link_libraries(test PRIVATE ${OpenCV_LIBS} ${TensorRT_LIBRARIES}
+                                   ${CUDA_LIBRARIES} cudart bytetrack)
+set_target_properties(
+  test
+  PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH_LIST}"
+             BUILD_RPATH
+             "\$ORIGIN;${TensorRT_LIB_DIR};${CUDA_TOOLKIT_ROOT_DIR}/lib64"
+             INSTALL_RPATH
+             "\$ORIGIN;${TensorRT_LIB_DIR};${CUDA_TOOLKIT_ROOT_DIR}/lib64"
+             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)

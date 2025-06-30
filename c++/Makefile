@@ -1,6 +1,7 @@
 # Variables
 TARGET           := detection
-ENGINE           := models/model-28-6.engine
+TEST_TARGET		 := test
+ENGINE           := models/30-6.engine
 VIDEO_INPUT      := videos/test_video_640x640.mp4
 BUILD_DIR        := build
 BIN_DIR          := bin
@@ -18,9 +19,13 @@ run: build
 build:
 	@echo "🔧 Building project..."
 	@cmake -B $(BUILD_DIR) -S . -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
-	@cmake --build $(BUILD_DIR) --target $(TARGET) -- -j$(shell nproc)
+	@cmake --build $(BUILD_DIR) --target $(TARGET) --target $(TEST_TARGET) -- -j$(shell nproc)
 
 rebuild: clean build
+
+test:
+	@echo "🚀 Running $(TEST_TARGET) with video input..."
+	@$(BIN_DIR)/$(TEST_TARGET) --engine $(ENGINE) --video $(VIDEO_INPUT) || echo "❌ Program failed"
 
 clean:
 	@echo "🧹 Cleaning build files..."
