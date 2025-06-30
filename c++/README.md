@@ -27,17 +27,13 @@ c++/
 │   ├── process.hpp        # Processing pipeline interface
 │   ├── utils.hpp          # Utility functions interface
 │   ├── preprocess.h       # CUDA preprocessing interface
-│   ├── common/            # Common utilities
-│   │   ├── common.h       # Global constants and configurations
-│   │   ├── cuda_utils.h   # CUDA utility functions
-│   │   └── macros.h       # Common macros
-│   ├── lanevision/        # Lane detection module
-│   │   ├── LaneDetector.h # Lane detection interface
-│   │   └── LaneDetector.cpp
-│   ├── followdist/        # Distance estimation
-│   │   └── FrontDistanceEstimator.h
-│   └── tensorrt/          # TensorRT utilities
-│       └── logging.h
+│   ├── common.h       # Global constants and configurations
+│   ├── cuda_utils.h   # CUDA utility functions
+│   ├── macros.h       # Common macros
+│   ├── LaneDetector.h # Lane detection interface
+│   ├── LaneDetector.cpp
+│   ├── FrontDistanceEstimator.h
+│   ├── logging.h
 ├── bytetrack/             # ByteTrack object tracking
 │   ├── include/           # ByteTrack headers
 │   └── src/               # ByteTrack implementation
