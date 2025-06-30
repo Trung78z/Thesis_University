@@ -264,17 +264,17 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
         int class_id = detection.class_id;
         float conf = detection.score;
 
-        cv::Scalar color(COLORS[class_id][0], COLORS[class_id][1], COLORS[class_id][2]);
+        cv::Scalar color(Config::COLORS[class_id][0], Config::COLORS[class_id][1], Config::COLORS[class_id][2]);
 
         // Draw rectangle
         cv::rectangle(image, box, color, 2);
 
         // Estimate and draw distance if class is relevant
         if (class_id == 2 || class_id == 4 || class_id == 5) {
-            double real_object_width = (class_id == 2) ? 1.6 : 2.5;
+            double real_object_width = (class_id == 2) ? 0.7 : 1.0;
             double pixel_distance = box.width;
             double distance =
-                distance_estimator.estimate(pixel_distance, focal_length, real_object_width);
+                distance_estimator.estimate(pixel_distance, Config::FOCAL_LENGTH, real_object_width);
 
             std::ostringstream ss;
             ss << std::fixed << std::setprecision(2) << distance << "m";
@@ -286,7 +286,7 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
 
         // Prepare and draw label with smaller font
         std::ostringstream label_ss;
-        label_ss << detection.track_id << ". " << CLASS_NAMES[class_id] << " " << std::fixed
+        label_ss << detection.track_id << ". " << Config::CLASS_NAMES[class_id] << " " << std::fixed
                  << std::setprecision(2) << conf;
 
         std::string label = label_ss.str();
