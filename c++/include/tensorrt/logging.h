@@ -25,6 +25,7 @@
 #include <sstream>
 #include <string>
 
+#include "NvInferRuntime.h"
 #include "NvInferRuntimeCommon.h"
 
 using Severity = nvinfer1::ILogger::Severity;
