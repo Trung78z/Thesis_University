@@ -11,9 +11,9 @@ using namespace cv;        // Use OpenCV namespace
 
 // Struct to store detection results
 struct Detection {
-    float conf;    // Confidence score of the detection
-    int class_id;  // Class ID of the detected object (e.g., person, car, etc.)
-    Rect bbox;     // Bounding box coordinates around the detected object
+    float conf;   // Confidence score of the detection
+    int classId;  // Class ID of the detected object (e.g., person, car, etc.)
+    Rect bbox;    // Bounding box coordinates around the detected object
 };
 
 // Main class for the YOLOv12 model
@@ -42,9 +42,6 @@ class Detect {
     // Draw bounding boxes and labels on the original image
     void draw(Mat& image, const vector<STrack>& output);
 
-    int getInputH();
-    int getInputW();
-
    private:
     // Initialize the TensorRT engine from a serialized model file
     void init(std::string engine_path, nvinfer1::ILogger& logger);
@@ -68,8 +65,8 @@ class Detect {
     IExecutionContext* context;
 
     // Model parameters
-    int input_w;                   // Input image width expected by the model
-    int input_h;                   // Input image height expected by the model
+    int inputWeight;               // Input image width expected by the model
+    int inputHeight;               // Input image height expected by the model
     int num_detections;            // Number of detections output by the model
     int detection_attribute_size;  // Attributes (e.g., bbox, class) per detection
     int num_classes = 21;          // Number of classes (e.g., COCO dataset has 80 classes)

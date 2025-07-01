@@ -19,11 +19,16 @@ run: build
 build:
 	@echo "🔧 Building project..."
 	@cmake -B $(BUILD_DIR) -S . -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
-	@cmake --build $(BUILD_DIR) --target $(TARGET) --target $(TEST_TARGET) -- -j$(shell nproc)
+	@cmake --build $(BUILD_DIR) --target $(TARGET) -- -j$(shell nproc)
+
+build_test:
+	@echo "🔧 Building project..."
+	@cmake -B $(BUILD_DIR) -S . -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
+	@cmake --build $(BUILD_DIR) --target $(TEST_TARGET) -- -j$(shell nproc)
 
 rebuild: clean build
 
-test:
+test: build_test
 	@echo "🚀 Running $(TEST_TARGET) with video input..."
 	@$(BIN_DIR)/$(TEST_TARGET) --engine $(ENGINE) --video $(VIDEO_INPUT) || echo "❌ Program failed"
 

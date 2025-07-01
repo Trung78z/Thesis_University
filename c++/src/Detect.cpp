@@ -26,7 +26,7 @@ Detect::Detect(string model_path, nvinfer1::ILogger &logger) {
         saveEngine(model_path);
     }
 
-    std::cout << "Input dimensions: " << input_h << "x" << input_w << std::endl;
+    std::cout << "Input dimensions: " << inputHeight << "x" << inputWeight << std::endl;
     std::cout << "TensorRT version: " << NV_TENSORRT_MAJOR << "." << NV_TENSORRT_MINOR << std::endl;
 }
 
@@ -46,8 +46,8 @@ void Detect::init(std::string engine_path, nvinfer1::ILogger &logger) {
     context = engine->createExecutionContext();
 
 #if NV_TENSORRT_MAJOR < 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR < 5)
-    input_h = engine->getBindingDimensions(0).d[2];
-    input_w = engine->getBindingDimensions(0).d[3];
+    inputHeight = engine->getBindingDimensions(0).d[2];
+    inputWeight = engine->getBindingDimensions(0).d[3];
     detection_attribute_size = engine->getBindingDimensions(1).d[1];
     num_detections = engine->getBindingDimensions(1).d[2];
 #else
@@ -57,8 +57,8 @@ void Detect::init(std::string engine_path, nvinfer1::ILogger &logger) {
     auto input_dims = engine->getTensorShape(input_name);
     auto output_dims = engine->getTensorShape(output_name);
 
-    input_h = input_dims.d[2];
-    input_w = input_dims.d[3];
+    inputHeight = input_dims.d[2];
+    inputWeight = input_dims.d[3];
     detection_attribute_size = output_dims.d[1];
     num_detections = output_dims.d[2];
 #endif
@@ -66,7 +66,7 @@ void Detect::init(std::string engine_path, nvinfer1::ILogger &logger) {
 
     // Initialize input buffers
     cpu_output_buffer = new float[detection_attribute_size * num_detections];
-    CUDA_CHECK(cudaMalloc(&gpu_buffers[0], 3 * input_w * input_h * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&gpu_buffers[0], 3 * inputWeight * inputHeight * sizeof(float)));
     CUDA_CHECK(
         cudaMalloc(&gpu_buffers[1], detection_attribute_size * num_detections * sizeof(float)));
 
@@ -103,7 +103,8 @@ Detect::~Detect() {
 
 void Detect::preprocess(Mat &image) {
     // Preprocessing data on gpu
-    cuda_preprocess(image.ptr(), image.cols, image.rows, gpu_buffers[0], input_w, input_h, stream);
+    cuda_preprocess(image.ptr(), image.cols, image.rows, gpu_buffers[0], inputWeight, inputHeight,
+                    stream);
     CUDA_CHECK(cudaStreamSynchronize(stream));
 }
 
@@ -135,7 +136,7 @@ void Detect::postprocess(Mat &image, vector<Detection> &output) {
     CUDA_CHECK(cudaStreamSynchronize(stream));
 
     vector<Rect> boxes;
-    vector<int> class_ids;
+    vector<int> classIds;
     vector<float> confidences;
 
     const Mat det_output(detection_attribute_size, num_detections, CV_32F, cpu_output_buffer);
@@ -158,7 +159,7 @@ void Detect::postprocess(Mat &image, vector<Detection> &output) {
             box.height = static_cast<int>(oh);
 
             boxes.push_back(box);
-            class_ids.push_back(class_id_point.y);
+            classIds.push_back(class_id_point.y);
             confidences.push_back(score);
         }
     }
@@ -169,9 +170,10 @@ void Detect::postprocess(Mat &image, vector<Detection> &output) {
     for (int i = 0; i < nms_result.size(); i++) {
         Detection result;
         int idx = nms_result[i];
-        result.class_id = class_ids[idx];
+        result.classId = classIds[idx];
         result.conf = confidences[idx];
-        result.bbox = scaleBoxToOriginal(boxes[idx], cv::Size(input_w, input_h), image.size());
+        result.bbox =
+            scaleBoxToOriginal(boxes[idx], cv::Size(inputWeight, inputHeight), image.size());
         output.push_back(result);
     }
 }
@@ -220,12 +222,12 @@ void Detect::build(std::string onnxPath, nvinfer1::ILogger &logger) {
 #endif
 }
 
-bool Detect::saveEngine(const std::string &onnxpath) {
+bool Detect::saveEngine(const std::string &onnxPath) {
     // Create an engine path from onnx path
     std::string engine_path;
-    size_t dotIndex = onnxpath.find_last_of(".");
+    size_t dotIndex = onnxPath.find_last_of(".");
     if (dotIndex != std::string::npos) {
-        engine_path = onnxpath.substr(0, dotIndex) + ".engine";
+        engine_path = onnxPath.substr(0, dotIndex) + ".engine";
     } else {
         return false;
     }
@@ -252,30 +254,28 @@ bool Detect::saveEngine(const std::string &onnxpath) {
 }
 
 void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
-    const float ratio_h = static_cast<float>(input_h) / image.rows;
-    const float ratio_w = static_cast<float>(input_w) / image.cols;
+    const float ratio_h = static_cast<float>(inputHeight) / image.rows;
+    const float ratio_w = static_cast<float>(inputWeight) / image.cols;
 
-    FrontDistanceEstimator distance_estimator;
+    FrontDistanceEstimator distanceEstimator(Config::focalLength, Config::realObjectWidth);
 
     for (const auto &detection : output) {
         const auto &tlwh = detection.tlwh;
         cv::Rect box(tlwh[0], tlwh[1], tlwh[2], tlwh[3]);
 
-        int class_id = detection.class_id;
+        int classId = detection.classId;
         float conf = detection.score;
 
-        cv::Scalar color(Config::COLORS[class_id][0], Config::COLORS[class_id][1],
-                         Config::COLORS[class_id][2]);
+        cv::Scalar color(Config::colors[classId][0], Config::colors[classId][1],
+                         Config::colors[classId][2]);
 
         // Draw rectangle
         cv::rectangle(image, box, color, 2);
 
         // Estimate and draw distance if class is relevant
-        if (class_id == 2 || class_id == 4 || class_id == 5) {
-            double real_object_width = (class_id == 2) ? 0.7 : 1.0;
-            double pixel_distance = box.width;
-            double distance = distance_estimator.estimate(pixel_distance, Config::FOCAL_LENGTH,
-                                                          real_object_width);
+        if (classId == 2 || classId == 4 || classId == 5) {
+            double pixelDistance = box.width;
+            double distance = distanceEstimator.estimate(pixelDistance);
 
             std::ostringstream ss;
             ss << std::fixed << std::setprecision(2) << distance << "m";
@@ -287,7 +287,7 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
 
         // Prepare and draw label with smaller font
         std::ostringstream label_ss;
-        label_ss << detection.track_id << ". " << Config::CLASS_NAMES[class_id] << " " << std::fixed
+        label_ss << detection.track_id << ". " << Config::CLASS_NAMES[classId] << " " << std::fixed
                  << std::setprecision(2) << conf;
 
         std::string label = label_ss.str();
@@ -327,7 +327,3 @@ cv::Rect Detect::scaleBoxToOriginal(const cv::Rect &input_box, const cv::Size &m
 
     return box;
 }
-
-int Detect::getInputH() { return input_h; }
-
-int Detect::getInputW() { return input_w; }

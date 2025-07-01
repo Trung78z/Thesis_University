@@ -5,7 +5,6 @@
 #include <LaneDetector.h>
 
 #include <cxxopts.hpp>
-#include <header.hpp>
 #include <iostream>
 #include <string>
 #include <utils.hpp>
@@ -14,7 +13,7 @@
 #include "Detect.h"
 #include "config.h"
 
-bool isTrackingClass(int class_id);
+bool isTrackingClass(int classId);
 int runVideo(const string path, Detect model);
 int runImages(vector<string> imagePathList, Detect model);
 

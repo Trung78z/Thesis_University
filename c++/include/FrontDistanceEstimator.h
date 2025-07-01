@@ -4,6 +4,11 @@
 
 class FrontDistanceEstimator {
    public:
-    FrontDistanceEstimator();
-    double estimate(double pixelDistance, double focalLength, double realObjectWidth);
+    FrontDistanceEstimator(double focalLength, double realObjectWidth);
+
+    double estimate(double pixelDistance);
+
+   private:
+    double m_focalLength;
+    double m_realObjectWidth;
 };

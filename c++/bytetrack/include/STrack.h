@@ -11,7 +11,7 @@ enum TrackState { New = 0, Tracked, Lost, Removed };
 
 class STrack {
    public:
-    STrack(vector<float> tlwh_, float score, int class_id);  // Updated constructor
+    STrack(vector<float> tlwh_, float score, int classId);  // Updated constructor
     ~STrack();
 
     vector<float> static tlbr_to_tlwh(vector<float> &tlbr);
@@ -44,7 +44,7 @@ class STrack {
     KAL_MEAN mean;
     KAL_COVA covariance;
     float score;
-    int class_id;  // Added class_id
+    int classId;  // Added classId
 
    private:
     byte_kalman::KalmanFilter kalman_filter;

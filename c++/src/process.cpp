@@ -1,9 +1,9 @@
-#include <process.hpp>
+#include <process.h>
 
-bool isTrackingClass(int class_id) {
+bool isTrackingClass(int classId) {
     return true;
     // for (auto &c : trackClasses) {
-    //   if (class_id == c) return true;
+    //   if (classId == c) return true;
     // }
     // return false;
 }
@@ -31,11 +31,11 @@ int runImages(vector<string> imagePathList, Detect model) {
         std::vector<Object> objects;
         for (const auto &obj : res) {
             auto box = obj.bbox;
-            auto class_id = obj.class_id;
+            auto classId = obj.classId;
             auto conf = obj.conf;
 
-            if (isTrackingClass(class_id)) {
-                Object obj{box, class_id, conf};
+            if (isTrackingClass(classId)) {
+                Object obj{box, classId, conf};
                 objects.push_back(obj);
             }
         }
@@ -109,11 +109,11 @@ int runVideo(const string path, Detect model) {
         std::vector<Object> objects;
         for (const auto &obj : res) {
             auto box = obj.bbox;
-            auto class_id = obj.class_id;
+            auto classId = obj.classId;
             auto conf = obj.conf;
 
-            if (isTrackingClass(class_id)) {
-                Object obj{box, class_id, conf};
+            if (isTrackingClass(classId)) {
+                Object obj{box, classId, conf};
                 objects.push_back(obj);
             }
         }
@@ -128,11 +128,11 @@ int runVideo(const string path, Detect model) {
 
         // for (int i = 0; i < output_stracks.size(); i++) {
         //   std::ostringstream label_ss;
-        //   label_ss << CLASS_NAMES[output_stracks[i].class_id] << " " << std::fixed
+        //   label_ss << CLASS_NAMES[output_stracks[i].classId] << " " << std::fixed
         //            << std::setprecision(2) << output_stracks[i].score;
         //   std::string label = label_ss.str();
         //   // std::cout << "Track ID: " << output_stracks[i].track_id
-        //   //           << ", Class ID: " << output_stracks[i].class_id
+        //   //           << ", Class ID: " << output_stracks[i].classId
         //   //           << ", Score: " << output_stracks[i].score << ", TLWH: " <<
         //   //           output_stracks[i].tlwh[0]
         //   //           << ", " << output_stracks[i].tlwh[1] << ", " << output_stracks[i].tlwh[2]
@@ -154,7 +154,7 @@ int runVideo(const string path, Detect model) {
         // Log detected objects
         for (const auto &obj : res) {
             auto box = obj.bbox;
-            auto class_id = obj.class_id;
+            auto classId = obj.classId;
             auto conf = obj.conf;
 
             cv::Point bottom_center(box.x + box.width / 2, box.y + box.height);
@@ -176,8 +176,8 @@ int runVideo(const string path, Detect model) {
                     cv::Point(l0[2], l0[3])   // bottom-left
                 };
 
-                if (obj.class_id == 2 || obj.class_id == 4 ||
-                    obj.class_id == 5)  // only consider car/bus/truck
+                if (obj.classId == 2 || obj.classId == 4 ||
+                    obj.classId == 5)  // only consider car/bus/truck
                 {
                     if (cv::pointPolygonTest(lane_area, bottom_center, false) >=
                         0)  // vehicle is in the lane
@@ -190,8 +190,8 @@ int runVideo(const string path, Detect model) {
                 }
             }
 
-            if (class_id >= 12 && class_id <= 17 && conf > 0.6) {
-                int newSpeed = (class_id - 9) * 10;  // class_id 12 -> 30km/h, 13 -> 40, etc.
+            if (classId >= 12 && classId <= 17 && conf > 0.6) {
+                int newSpeed = (classId - 9) * 10;  // classId 12 -> 30km/h, 13 -> 40, etc.
                 maxSpeed = newSpeed;
             }
         }
