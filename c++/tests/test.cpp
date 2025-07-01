@@ -117,8 +117,8 @@ int main(int argc, char **argv) {
             std::vector<STrack> outputStracks = tracker.update(objects);
 
             // Draw center zone
-            cv::rectangle(image, cv::Point(xMin, 0), cv::Point(xMax, image.rows),
-                          cv::Scalar(255, 255, 0), 2);
+            // cv::rectangle(image, cv::Point(xMin, 0), cv::Point(xMax, image.rows),
+            // cv::Scalar(255, 255, 0), 2);
 
             // --- Ego Vehicle Speed Control Logic ---
             int targetId = -1;
