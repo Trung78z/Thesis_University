@@ -61,9 +61,9 @@ int runVideo(const string path, Detect model) {
     // video/x-raw,format=BGRx ! videoconvert ! appsink', cv::CAP_GSTREAMER);
     // std::string capture_pipeline =
     //     "nvarguscamerasrc ! "
-    //     "video/x-raw(memory:NVMM), width=" + std::to_string(WIDTH) +
-    //     ", height=" + std::to_string(HEIGHT) +
-    //     ", format=NV12, framerate=" + std::to_string(FPS) + "/1 ! "
+    //     "video/x-raw(memory:NVMM), width=" + std::to_string(width) +
+    //     ", height=" + std::to_string(height) +
+    //     ", format=NV12, framerate=" + std::to_string(fps) + "/1 ! "
     //     "nvvidconv flip-method=0 ! "
     //     "video/x-raw, format=BGRx ! "
     //     "videoconvert ! "
@@ -76,7 +76,7 @@ int runVideo(const string path, Detect model) {
         cerr << "Error: Cannot open video file!" << endl;
         return 0;
     }
-    // Get frame width, height, and FPS
+    // Get frame width, height, and fps
     double fps = static_cast<int>(cap.get(cv::CAP_PROP_FPS));
 
     BYTETracker tracker(fps, 30);
@@ -97,7 +97,7 @@ int runVideo(const string path, Detect model) {
             break;
         }
         // Resize the image to fit the window
-        // cv::resize(image, image, cv::Size(WIDTH, HEIGHT));
+        // cv::resize(image, image, cv::Size(width, height));
         vector<Detection> res;
 
         model.preprocess(image);
@@ -128,7 +128,7 @@ int runVideo(const string path, Detect model) {
 
         // for (int i = 0; i < output_stracks.size(); i++) {
         //   std::ostringstream label_ss;
-        //   label_ss << CLASS_NAMES[output_stracks[i].classId] << " " << std::fixed
+        //   label_ss << classNames[output_stracks[i].classId] << " " << std::fixed
         //            << std::setprecision(2) << output_stracks[i].score;
         //   std::string label = label_ss.str();
         //   // std::cout << "Track ID: " << output_stracks[i].track_id
@@ -197,7 +197,7 @@ int runVideo(const string path, Detect model) {
         }
 
         laneDetector.drawLanes(image, lanes);
-        // FPS calculation
+        // fps calculation
         frameCount++;
 
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - fpsStartTime).count();
@@ -230,8 +230,8 @@ int runVideo(const string path, Detect model) {
         } else {
             accSpeed = accMaxSpeed;  // Reset to max speed if no speed limit detected
         }
-        // Draw FPS
-        cv::putText(image, cv::format("FPS: %.2f", fps), cv::Point(10, 30),
+        // Draw fps
+        cv::putText(image, cv::format("fps: %.2f", fps), cv::Point(10, 30),
                     cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 255, 0), 2);
 
         cv::imshow("Result", image);

@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
             std::cerr << "Error: Cannot open video file!" << std::endl;
             return 0;
         }
-        // Get frame width, height, and FPS
+        // Get frame width, height, and fps
         double fps = static_cast<int>(cap.get(cv::CAP_PROP_FPS));
 
         BYTETracker tracker(fps, 30);

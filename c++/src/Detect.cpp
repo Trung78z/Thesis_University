@@ -287,7 +287,7 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
 
         // Prepare and draw label with smaller font
         std::ostringstream label_ss;
-        label_ss << detection.track_id << ". " << Config::CLASS_NAMES[classId] << " " << std::fixed
+        label_ss << detection.track_id << ". " << Config::classNames[classId] << " " << std::fixed
                  << std::setprecision(2) << conf;
 
         std::string label = label_ss.str();

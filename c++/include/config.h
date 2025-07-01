@@ -1,6 +1,6 @@
 // config.h - Centralized configuration for camera, detection, and control parameters.
 //
-// - Camera & Frame Settings: Resolution, FPS, and camera calibration (focal length, object width).
+// - Camera & Frame Settings: Resolution, fps, and camera calibration (focal length, object width).
 // - ROI: X-axis bounds for focusing detection/tracking.
 // - Distance & Speed Estimation: Limits and smoothing for object speed/distance calculations.
 // - Adaptive Speed Control: Desired speeds, following distances, and emergency thresholds.
@@ -21,9 +21,9 @@ namespace Config {
 // ========================
 // Camera & Frame Settings
 // ========================
-constexpr int WIDTH = 1280;
-constexpr int HEIGHT = 720;
-constexpr int FPS = 30;
+constexpr int width = 1280;
+constexpr int height = 720;
+constexpr int fps = 30;
 constexpr float focalLength = 1778.0f;   // pixels
 constexpr float realObjectWidth = 0.7f;  // meters (average width of a car)
 
@@ -67,7 +67,7 @@ constexpr float maxSpeedKph = 120.0f;
 const std::vector<int> trackClasses = {0, 1, 2,
                                        3, 5, 7};  // person, bicycle, car, motorcycle, bus, truck
 
-const std::vector<std::string> CLASS_NAMES = {
+const std::vector<std::string> classNames = {
     "person",          "bicycle",      "car",           "motorcycle",       "bus",
     "truck",           "stop sign",    "other-vehicle", "crosswalk",        "red light",
     "yellow light",    "green light",  "Limit 30km-h",  "Limit 40km-h",     "Limit 50km-h",
