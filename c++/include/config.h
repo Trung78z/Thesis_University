@@ -13,9 +13,9 @@
 
 #ifndef CONFIG_H
 #define CONFIG_H
+#include <opencv2/core.hpp>
 #include <string>
 #include <vector>
-
 namespace Config {
 
 // ========================
@@ -55,7 +55,7 @@ constexpr float criticalDistance = 5.0f;          // meters - emergency braking
 // Speed Adjustment Parameters (Control)
 // ======================================
 constexpr float speedUpdateInterval = 0.5f;    // seconds - update interval
-constexpr float gentleAdjustment = 2.0f;       // km/h per update (gentle)
+constexpr float gentleAdjustment = 1.0f;       // km/h per update (gentle)
 constexpr float moderateAdjustment = 5.0f;     // km/h per update (moderate)
 constexpr float aggressiveAdjustment = 10.0f;  // km/h per update (urgent)
 constexpr float minSpeedKph = 20.0f;
@@ -81,5 +81,13 @@ const std::vector<std::vector<unsigned int>> colors = {
     {255, 200, 0},  {255, 170, 0},  {255, 85, 0},    {180, 180, 180}, {140, 140, 140},
     {100, 100, 100}};
 }  // namespace Config
+
+// Define better HUD colors
+const cv::Scalar white(255, 255, 255);
+const cv::Scalar red(68, 68, 255);      // BGR for #FF4444
+const cv::Scalar yellow(0, 255, 255);   // BGR for #FFFF00
+const cv::Scalar orange(0, 165, 255);   // BGR for #FFA500
+const cv::Scalar green(102, 255, 102);  // BGR for #66FF66
+const cv::Scalar gray(180, 180, 180);
 
 #endif  // CONFIG_H
