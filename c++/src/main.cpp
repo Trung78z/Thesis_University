@@ -4,11 +4,24 @@
  * @brief Setting up Tensorrt logger
  */
 class Logger : public nvinfer1::ILogger {
-    void log(Severity severity, const char *msg) noexcept override {
-        // Only output logs with severity greater than warning
-        if (severity <= Severity::kWARNING) std::cout << msg << std::endl;
+public:
+    static Logger& getInstance() {
+        static Logger instance;
+        return instance;
     }
-} logger;
+
+    void log(Severity severity, const char* msg) noexcept override {
+        if (severity <= Severity::kWARNING)
+            std::cout << msg << std::endl;
+    }
+
+private:
+    Logger() = default;
+    ~Logger() = default;
+    Logger(const Logger&) = delete;
+    Logger& operator=(const Logger&) = delete;
+};
+
 // Create CLI option parser
 cxxopts::Options createOptions() {
     cxxopts::Options options("test", "Run inference on a video or images (choose only one)");
@@ -30,7 +43,7 @@ class App {
         }
 
         std::cout << "🔧 Loading engine from: " << config.enginePath << std::endl;
-        Detect model(config.enginePath, logger);
+        Detect model(config.enginePath, Logger::getInstance());
 
         if (!config.videoPath.empty()) {
             std::cout << "🎞️ Running video inference on: " << config.videoPath << std::endl;
