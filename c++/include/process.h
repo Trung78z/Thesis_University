@@ -12,9 +12,21 @@
 
 #include "Detect.h"
 #include "config.h"
+using namespace Config;
+int runVideo(const std::string &path, Detect &model);
+;
+int runImages(const vector<string> imagePathList, Detect &model);
 
-bool isTrackingClass(int classId);
-int runVideo(const string path, Detect model);
-int runImages(vector<string> imagePathList, Detect model);
+void selectTarget(const std::vector<STrack> &tracks, float xMin, float xMax, int &targetId,
+                  cv::Rect &bestBox, float &maxHeight);
+std::vector<Object> filterDetections(const std::vector<Detection> &res);
+
+void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
+                        float &currentEgoSpeed, double &lastSpeedUpdateTime,
+                        std::map<int, std::deque<float>> &objectBuffers,
+                        std::map<int, float> &prevDistances, std::map<int, double> &prevTimes,
+                        std::map<int, float> &smoothedSpeeds, std::deque<float> &speedChangeHistory,
+                        float &avgDistance, float &frontSpeed, std::string &action,
+                        cv::Scalar &actionColor);
 
 #endif

@@ -54,3 +54,24 @@ bool checkImages(const string &path, vector<string> &imagePathList) {
         return false;
     }
 }
+
+bool isTrackingClass(int classId) {
+    return true;
+    // for (auto &c : trackClasses) {
+    //   if (classId == c) return true;
+    // }
+    // return false;
+}
+
+double getCurrentTimeInSeconds() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::system_clock::now().time_since_epoch())
+               .count() /
+           1000.0;
+}
+
+int getTotalMilliseconds(const std::chrono::system_clock::time_point &start,
+                         const std::chrono::system_clock::time_point &end) {
+    return static_cast<int>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+}

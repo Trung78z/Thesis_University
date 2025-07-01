@@ -1,6 +1,5 @@
 #include "Detect.h"
 
-#include <FrontDistanceEstimator.h>
 #include <NvOnnxParser.h>
 
 #include <fstream>
@@ -257,8 +256,6 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
     const float ratio_h = static_cast<float>(inputHeight) / image.rows;
     const float ratio_w = static_cast<float>(inputWeight) / image.cols;
 
-    FrontDistanceEstimator distanceEstimator(Config::focalLength, Config::realObjectWidth);
-
     for (const auto &detection : output) {
         const auto &tlwh = detection.tlwh;
         cv::Rect box(tlwh[0], tlwh[1], tlwh[2], tlwh[3]);
@@ -274,11 +271,8 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
 
         // Estimate and draw distance if class is relevant
         if (classId == 2 || classId == 4 || classId == 5) {
-            double pixelDistance = box.width;
-            double distance = distanceEstimator.estimate(pixelDistance);
-
             std::ostringstream ss;
-            ss << std::fixed << std::setprecision(2) << distance << "m";
+            ss << std::fixed << std::setprecision(2) << detection.estimatedDistance << "m";
 
             // Smaller font for distance text
             cv::putText(image, ss.str(), cv::Point(box.x + 2, box.y - 20), cv::FONT_HERSHEY_SIMPLEX,

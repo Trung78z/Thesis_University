@@ -10,5 +10,12 @@
 #include <vector>
 using namespace std;
 bool checkVideo(const string &path);
+
 bool checkImages(const string &path, vector<string> &imagePathList);
+
+bool isTrackingClass(int classId);
+double getCurrentTimeInSeconds();
+
+int getTotalMilliseconds(const std::chrono::system_clock::time_point &start,
+                         const std::chrono::system_clock::time_point &end);
 #endif

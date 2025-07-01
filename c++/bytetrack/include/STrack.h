@@ -1,9 +1,11 @@
 #pragma once
 
+#include <FrontDistanceEstimator.h>
+#include <config.h>
+
 #include <opencv2/opencv.hpp>
 
 #include "kalmanFilter.h"
-
 using namespace cv;
 using namespace std;
 
@@ -45,7 +47,9 @@ class STrack {
     KAL_COVA covariance;
     float score;
     int classId;  // Added classId
+    float estimatedDistance = -1.0f;
 
    private:
     byte_kalman::KalmanFilter kalman_filter;
+    static FrontDistanceEstimator estimator;
 };

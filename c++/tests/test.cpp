@@ -6,7 +6,6 @@
 #include <deque>
 #include <iomanip>
 #include <map>
-#include <numeric>
 
 using namespace Config;
 
@@ -20,20 +19,20 @@ class Logger : public nvinfer1::ILogger {
     }
 } logger;
 
-// --- Ego Vehicle Control Variables ---
-float currentEgoSpeed = initialSpeedKph;
-double lastSpeedUpdateTime = 0;
-std::deque<float> speedChangeHistory;
-std::deque<float> distanceHistory;
-
-// --- Object tracking buffers ---
-std::map<int, std::deque<float>> objectBuffers;
-std::map<int, float> prevDistances;
-std::map<int, double> prevTimes;
-std::map<int, float> smoothedSpeeds;
-
 int main(int argc, char **argv) {
     try {
+        // --- Ego Vehicle Control Variables ---
+        float currentEgoSpeed = initialSpeedKph;
+        double lastSpeedUpdateTime = 0;
+        std::deque<float> speedChangeHistory;
+        std::deque<float> distanceHistory;
+
+        // --- Object tracking buffers ---
+        std::map<int, std::deque<float>> objectBuffers;
+        std::map<int, float> prevDistances;
+        std::map<int, double> prevTimes;
+        std::map<int, float> smoothedSpeeds;
+
         cxxopts::Options options("test", "Run inference on a video or images (choose only one)");
 
         options.add_options()("v,video", "Video path", cxxopts::value<std::string>())(
@@ -102,10 +101,7 @@ int main(int argc, char **argv) {
                 break;
             }
 
-            double t0 = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            std::chrono::system_clock::now().time_since_epoch())
-                            .count() /
-                        1000.0;
+            double timeStart = getCurrentTimeInSeconds();
 
             // Resize the image to fit the window
             // cv::resize(image, image, cv::Size(width, height));
@@ -115,24 +111,14 @@ int main(int argc, char **argv) {
             model.infer();
             model.postprocess(image, res);
 
-            std::vector<Object> objects;
-            for (const auto &obj : res) {
-                auto box = obj.bbox;
-                auto classId = obj.classId;
-                auto conf = obj.conf;
-
-                if (isTrackingClass(classId)) {
-                    Object obj{box, classId, conf};
-                    objects.push_back(obj);
-                }
-            }
+            std::vector<Object> objects = filterDetections(res);
 
             // Tracking
             std::vector<STrack> outputStracks = tracker.update(objects);
 
             // Draw center zone
-            // cv::rectangle(image, cv::Point(xMin, 0), cv::Point(xMax, image.rows),
-            // cv::Scalar(255, 255, 0), 2);
+            cv::rectangle(image, cv::Point(xMin, 0), cv::Point(xMax, image.rows),
+                          cv::Scalar(255, 255, 0), 2);
 
             // --- Ego Vehicle Speed Control Logic ---
             int targetId = -1;
@@ -140,137 +126,17 @@ int main(int argc, char **argv) {
             cv::Rect bestBox;
 
             // Process tracked detections
-            for (const auto &track : outputStracks) {
-                if (!track.is_activated) continue;
-
-                // Get bounding box from tlbr (top-left, bottom-right format)
-                const auto &tlbr = track.tlbr;
-                float x1 = tlbr[0], y1 = tlbr[1], x2 = tlbr[2], y2 = tlbr[3];
-                float xCenter = (x1 + x2) / 2.0f;
-
-                if (xMin <= xCenter && xCenter <= xMax) {
-                    float h = y2 - y1;  // height = bottom - top
-                    if (h > maxHeight) {
-                        maxHeight = h;
-                        targetId = track.track_id;
-                        bestBox = cv::Rect(x1, y1, x2 - x1, y2 - y1);
-                    }
-                }
-            }
+            selectTarget(outputStracks, xMin, xMax, targetId, bestBox, maxHeight);
 
             // Speed control logic
             std::string action = "FREE DRIVE";
             cv::Scalar actionColor = cv::Scalar(0, 255, 0);
             float avgDistance = 0.0f;
             float frontAbsoluteSpeed = 0.0f;
-
-            if (targetId != -1 && maxHeight > 0) {
-                float h = static_cast<float>(bestBox.height);
-                float distance = (realObjectWidth * focalLength) / h;
-
-                // Initialize buffers for new target
-                if (objectBuffers.find(targetId) == objectBuffers.end()) {
-                    objectBuffers[targetId] = std::deque<float>();
-                    prevDistances[targetId] = distance;
-                    prevTimes[targetId] = t0;
-                    smoothedSpeeds[targetId] = 0.0f;
-                }
-
-                // Add distance to buffer
-                objectBuffers[targetId].push_back(distance);
-                if (objectBuffers[targetId].size() > 5) {
-                    objectBuffers[targetId].pop_front();
-                }
-
-                // Calculate smoothed distance
-                if (objectBuffers[targetId].size() >= 3) {
-                    std::vector<float> sortedDistances(objectBuffers[targetId].begin(),
-                                                       objectBuffers[targetId].end());
-                    std::sort(sortedDistances.begin(), sortedDistances.end());
-                    avgDistance = sortedDistances[sortedDistances.size() / 2];
-                } else {
-                    avgDistance = std::accumulate(objectBuffers[targetId].begin(),
-                                                  objectBuffers[targetId].end(), 0.0f) /
-                                  objectBuffers[targetId].size();
-                }
-
-                double dt = t0 - prevTimes[targetId];
-
-                // Calculate relative speed
-                if (dt >= minTimeDelta) {
-                    float prevDistance = prevDistances[targetId];
-                    float dDist = prevDistance - avgDistance;
-
-                    if (std::abs(dDist) >= minDistDelta) {
-                        float speedMps = dDist / dt;
-                        float relativeSpeedKph = speedMps * 3.6f;
-
-                        // Smooth the relative speed
-                        smoothedSpeeds[targetId] =
-                            smoothingFactor * relativeSpeedKph +
-                            (1.0f - smoothingFactor) * smoothedSpeeds[targetId];
-
-                        prevDistances[targetId] = avgDistance;
-                        prevTimes[targetId] = t0;
-                    }
-                }
-
-                // Calculate front vehicle absolute speed
-                float relativeSpeed = smoothedSpeeds[targetId];
-                frontAbsoluteSpeed = currentEgoSpeed - relativeSpeed;
-
-                // Update ego speed if enough time has passed
-                double speedUpdateDt = t0 - lastSpeedUpdateTime;
-                if (speedUpdateDt >= speedUpdateInterval) {
-                    // Determine driving state
-                    auto [drivingState, urgencyLevel] =
-                        getDrivingState(avgDistance, frontAbsoluteSpeed, currentEgoSpeed);
-
-                    // Calculate target speed
-                    float targetSpeed =
-                        calculateTargetSpeed(avgDistance, frontAbsoluteSpeed, currentEgoSpeed,
-                                             drivingState, urgencyLevel);
-
-                    // Update ego speed smoothly
-                    float oldEgoSpeed = currentEgoSpeed;
-                    currentEgoSpeed = updateEgoSpeedSmooth(currentEgoSpeed, targetSpeed,
-                                                           urgencyLevel, speedUpdateDt);
-
-                    // Track speed change
-                    float speedChange = currentEgoSpeed - oldEgoSpeed;
-                    speedChangeHistory.push_back(speedChange);
-                    if (speedChangeHistory.size() > 10) {
-                        speedChangeHistory.pop_front();
-                    }
-
-                    lastSpeedUpdateTime = t0;
-
-                    // Get action and color for display
-                    getActionAndColor(drivingState, speedChange, action, actionColor);
-
-                    std::cout << "[+] ID " << targetId << " | Dist: " << std::fixed
-                              << std::setprecision(1) << avgDistance << "m | "
-                              << "Front: " << frontAbsoluteSpeed << " km/h | "
-                              << "Ego: " << currentEgoSpeed << " km/h | "
-                              << "State: " << drivingState << " | Action: " << action << std::endl;
-                }
-            } else {
-                // No target vehicle - free driving
-                double speedUpdateDt = t0 - lastSpeedUpdateTime;
-                if (speedUpdateDt >= speedUpdateInterval) {
-                    // Gradually return to cruise speed
-                    if (std::abs(currentEgoSpeed - cruiseSpeedKph) > 1) {
-                        if (currentEgoSpeed < cruiseSpeedKph) {
-                            currentEgoSpeed =
-                                std::min(cruiseSpeedKph, currentEgoSpeed + gentleAdjustment);
-                        } else {
-                            currentEgoSpeed =
-                                std::max(cruiseSpeedKph, currentEgoSpeed - gentleAdjustment);
-                        }
-                    }
-                    lastSpeedUpdateTime = t0;
-                }
-            }
+            updateSpeedControl(timeStart, targetId, bestBox, currentEgoSpeed, lastSpeedUpdateTime,
+                               objectBuffers, prevDistances, prevTimes, smoothedSpeeds,
+                               speedChangeHistory, avgDistance, frontAbsoluteSpeed, action,
+                               actionColor);
 
             // Always display information on frame
             if (targetId != -1 && avgDistance > 0) {

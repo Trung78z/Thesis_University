@@ -76,6 +76,7 @@ void STrack::re_activate(STrack &new_track, int frame_id, bool new_id) {
     this->score = new_track.score;
     if (new_id) this->track_id = next_id();
 }
+FrontDistanceEstimator STrack::estimator(Config::focalLength, Config::realObjectWidth);
 
 void STrack::update(STrack &new_track, int frame_id) {
     this->frame_id = frame_id;
@@ -88,6 +89,14 @@ void STrack::update(STrack &new_track, int frame_id) {
     xyah_box[2] = xyah[2];
     xyah_box[3] = xyah[3];
     this->classId = new_track.classId;
+
+    // Estimate distance from bbox width (tlwh[2] = width)
+    if (this->classId == 2 || this->classId == 4 || this->classId == 5) {
+        this->estimatedDistance = estimator.estimate(this->tlwh[3]);
+    } else {
+        this->estimatedDistance = -1.0f;  // not relevant
+    }
+
     auto mc = this->kalman_filter.update(this->mean, this->covariance, xyah_box);
     this->mean = mc.first;
     this->covariance = mc.second;

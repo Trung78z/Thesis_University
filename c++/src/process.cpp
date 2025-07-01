@@ -1,14 +1,9 @@
+#include <EgoVehicle.h>
 #include <process.h>
 
-bool isTrackingClass(int classId) {
-    return true;
-    // for (auto &c : trackClasses) {
-    //   if (classId == c) return true;
-    // }
-    // return false;
-}
+#include <numeric>
 
-int runImages(vector<string> imagePathList, Detect model) {
+int runImages(const vector<string> imagePathList, Detect &model) {
     // Path to folder containing images
     int fps = 30;
     BYTETracker tracker(fps, 30);
@@ -28,17 +23,7 @@ int runImages(vector<string> imagePathList, Detect model) {
         auto end = std::chrono::system_clock::now();
 
         model.postprocess(image, res);
-        std::vector<Object> objects;
-        for (const auto &obj : res) {
-            auto box = obj.bbox;
-            auto classId = obj.classId;
-            auto conf = obj.conf;
-
-            if (isTrackingClass(classId)) {
-                Object obj{box, classId, conf};
-                objects.push_back(obj);
-            }
-        }
+        std::vector<Object> objects = filterDetections(res);
         std::vector<STrack> output_stracks = tracker.update(objects);
         model.draw(image, output_stracks);
         auto tc =
@@ -53,7 +38,7 @@ int runImages(vector<string> imagePathList, Detect model) {
     return 0;
 }
 
-int runVideo(const string path, Detect model) {
+int runVideo(const std::string &path, Detect &model) {
     cout << "Opening video: " << path << endl;
     // Example GStreamer pipeline for Jetson (commented out)
     // cv::VideoCapture('nvarguscamerasrc !
@@ -106,50 +91,15 @@ int runVideo(const string path, Detect model) {
 
         model.postprocess(image, res);
 
-        std::vector<Object> objects;
-        for (const auto &obj : res) {
-            auto box = obj.bbox;
-            auto classId = obj.classId;
-            auto conf = obj.conf;
-
-            if (isTrackingClass(classId)) {
-                Object obj{box, classId, conf};
-                objects.push_back(obj);
-            }
-        }
+        std::vector<Object> objects = filterDetections(res);
 
         std::vector<cv::Vec4i> lanes = laneDetector.detectLanes(image);
         // Tracking
         std::vector<STrack> output_stracks = tracker.update(objects);
 
         auto end = std::chrono::system_clock::now();
-        total_ms =
-            total_ms + std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        total_ms = total_ms + getTotalMilliseconds(start, end);
 
-        // for (int i = 0; i < output_stracks.size(); i++) {
-        //   std::ostringstream label_ss;
-        //   label_ss << classNames[output_stracks[i].classId] << " " << std::fixed
-        //            << std::setprecision(2) << output_stracks[i].score;
-        //   std::string label = label_ss.str();
-        //   // std::cout << "Track ID: " << output_stracks[i].track_id
-        //   //           << ", Class ID: " << output_stracks[i].classId
-        //   //           << ", Score: " << output_stracks[i].score << ", TLWH: " <<
-        //   //           output_stracks[i].tlwh[0]
-        //   //           << ", " << output_stracks[i].tlwh[1] << ", " << output_stracks[i].tlwh[2]
-        //   <<
-        //   ", "
-        //   //           << output_stracks[i].tlwh[3] << std::endl;
-        //   std::vector<float> tlwh = output_stracks[i].tlwh;
-        //   // bool vertical = tlwh[2] / tlwh[3] > 1.6;
-        //   // if (tlwh[2] * tlwh[3] > 20 && !vertical)
-        //   if (tlwh[2] * tlwh[3] > 20) {
-        //     cv::Scalar s = tracker.get_color(output_stracks[i].track_id);
-        //     cv::putText(image, cv::format("%d. %s", output_stracks[i].track_id, label.c_str()),
-        //                 cv::Point(tlwh[0], tlwh[1] - 5), 0, 0.6, cv::Scalar(0, 0, 255), 2,
-        //                 cv::LINE_AA);
-        //     cv::rectangle(image, cv::Rect(tlwh[0], tlwh[1], tlwh[2], tlwh[3]), s, 2);
-        //   }
-        // }
         model.draw(image, output_stracks);
         // Log detected objects
         for (const auto &obj : res) {
@@ -244,4 +194,122 @@ int runVideo(const string path, Detect model) {
     cap.release();
     cv::destroyAllWindows();
     return 0;
+}
+
+std::vector<Object> filterDetections(const std::vector<Detection> &res) {
+    std::vector<Object> objects;
+    for (const auto &obj : res) {
+        if (isTrackingClass(obj.classId)) {
+            objects.push_back({obj.bbox, obj.classId, obj.conf});
+        }
+    }
+    return objects;
+}
+
+void selectTarget(const std::vector<STrack> &tracks, float xMin, float xMax, int &targetId,
+                  cv::Rect &bestBox, float &maxHeight) {
+    for (const auto &track : tracks) {
+        if (!track.is_activated) continue;
+        auto &tlbr = track.tlbr;
+        float x1 = tlbr[0], y1 = tlbr[1], x2 = tlbr[2], y2 = tlbr[3];
+        float xCenter = (x1 + x2) / 2.0f;
+        float height = y2 - y1;
+
+        if (xMin <= xCenter && xCenter <= xMax && height > maxHeight) {
+            maxHeight = height;
+            targetId = track.track_id;
+            bestBox = cv::Rect(x1, y1, x2 - x1, y2 - y1);
+        }
+    }
+}
+
+void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
+                        float &currentEgoSpeed, double &lastSpeedUpdateTime,
+                        std::map<int, std::deque<float>> &objectBuffers,
+                        std::map<int, float> &prevDistances, std::map<int, double> &prevTimes,
+                        std::map<int, float> &smoothedSpeeds, std::deque<float> &speedChangeHistory,
+                        float &avgDistance, float &frontSpeed, std::string &action,
+                        cv::Scalar &actionColor) {
+    if (targetId != -1 && bestBox.height > 0) {
+        float h = bestBox.height;
+        float distance = (realObjectWidth * focalLength) / h;
+
+        // Initialize if new
+        if (objectBuffers.find(targetId) == objectBuffers.end()) {
+            objectBuffers[targetId] = std::deque<float>();
+            prevDistances[targetId] = distance;
+            prevTimes[targetId] = timeStart;
+            smoothedSpeeds[targetId] = 0.0f;
+        }
+
+        // Push to buffer
+        auto &buf = objectBuffers[targetId];
+        buf.push_back(distance);
+        if (buf.size() > 5) buf.pop_front();
+
+        // ✅ Always update avgDistance
+        if (buf.size() >= 3) {
+            std::deque<float> sortedBuf = buf;
+            std::sort(sortedBuf.begin(), sortedBuf.end());
+            avgDistance = sortedBuf[sortedBuf.size() / 2];  // median
+        } else {
+            avgDistance = std::accumulate(buf.begin(), buf.end(), 0.0f) / buf.size();  // mean
+        }
+
+        // ✅ Always update smoothed speed
+        double dt = timeStart - prevTimes[targetId];
+        if (dt >= minTimeDelta) {
+            float dDist = prevDistances[targetId] - avgDistance;
+            if (std::abs(dDist) >= minDistDelta) {
+                float speed = (dDist / dt) * 3.6f;
+                smoothedSpeeds[targetId] =
+                    smoothingFactor * speed + (1 - smoothingFactor) * smoothedSpeeds[targetId];
+                prevDistances[targetId] = avgDistance;
+                prevTimes[targetId] = timeStart;
+            }
+        }
+
+        // ✅ Always update front speed every frame
+        float relativeSpeed = smoothedSpeeds[targetId];
+        frontSpeed = currentEgoSpeed - relativeSpeed;
+
+        // Speed control logic (less frequent)
+        if (timeStart - lastSpeedUpdateTime >= speedUpdateInterval) {
+            auto [state, urgency] = getDrivingState(avgDistance, frontSpeed, currentEgoSpeed);
+            float targetSpeed =
+                calculateTargetSpeed(avgDistance, frontSpeed, currentEgoSpeed, state, urgency);
+            float oldSpeed = currentEgoSpeed;
+
+            currentEgoSpeed = updateEgoSpeedSmooth(currentEgoSpeed, targetSpeed, urgency,
+                                                   timeStart - lastSpeedUpdateTime);
+            float speedDelta = currentEgoSpeed - oldSpeed;
+
+            speedChangeHistory.push_back(speedDelta);
+            if (speedChangeHistory.size() > 10) speedChangeHistory.pop_front();
+
+            lastSpeedUpdateTime = timeStart;
+            getActionAndColor(state, speedDelta, action, actionColor);
+
+            std::cout << "[+] ID " << targetId << " | Dist: " << std::fixed << std::setprecision(1)
+                      << avgDistance << "m | Front: " << frontSpeed
+                      << " km/h | Ego: " << currentEgoSpeed << " km/h | State: " << state
+                      << " | Action: " << action << std::endl;
+        }
+    } else {
+        // No target: cruise mode
+        if (timeStart - lastSpeedUpdateTime >= speedUpdateInterval) {
+            if (std::abs(currentEgoSpeed - cruiseSpeedKph) > 1) {
+                currentEgoSpeed +=
+                    (currentEgoSpeed < cruiseSpeedKph) ? gentleAdjustment : -gentleAdjustment;
+                currentEgoSpeed = std::clamp(currentEgoSpeed, 0.0f, maxValidSpeedKph);
+            }
+            lastSpeedUpdateTime = timeStart;
+        }
+
+        // ❗ Reset or mark frontSpeed and avgDistance as unavailable
+        frontSpeed = 0.0f;
+        avgDistance = -1.0f;
+        action = "CRUISE";
+        actionColor = cv::Scalar(200, 200, 200);
+    }
 }
