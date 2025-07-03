@@ -3,6 +3,7 @@ TARGET           := detection
 TEST_TARGET		 := test
 ENGINE           := models/30-6.engine
 VIDEO_INPUT      := videos/test_video_640x640.mp4
+# VIDEO_INPUT      := ../services/tool/video/40xZVEFVBuE.mp4
 BUILD_DIR        := build
 BIN_DIR          := bin
 CMAKE_BUILD_TYPE ?= Release

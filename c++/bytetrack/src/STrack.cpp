@@ -76,7 +76,8 @@ void STrack::re_activate(STrack &new_track, int frame_id, bool new_id) {
     this->score = new_track.score;
     if (new_id) this->track_id = next_id();
 }
-FrontDistanceEstimator STrack::estimator(Config::focalLength, Config::realObjectWidth);
+FrontDistanceEstimator STrack::estimator(Config::camera.focalLength,
+                                         Config::camera.realObjectWidth);
 
 void STrack::update(STrack &new_track, int frame_id) {
     this->frame_id = frame_id;

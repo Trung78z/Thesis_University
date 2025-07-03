@@ -22,7 +22,7 @@ class Logger : public nvinfer1::ILogger {
 int main(int argc, char **argv) {
     try {
         // --- Ego Vehicle Control Variables ---
-        float currentEgoSpeed = initialSpeedKph;
+        float currentEgoSpeed = Config::adaptiveSpeed.initial;
         double lastSpeedUpdateTime = 0;
         std::deque<float> speedChangeHistory;
         std::deque<float> distanceHistory;
@@ -151,11 +151,11 @@ int main(int argc, char **argv) {
 
                 // Draw distance zones indicator
                 cv::Scalar zoneColor;
-                if (avgDistance < criticalDistance) {
+                if (avgDistance < Config::adaptiveSpeed.cruise) {
                     zoneColor = cv::Scalar(0, 0, 255);  // Red - emergency
-                } else if (avgDistance < minFollowingDistance) {
+                } else if (avgDistance < Config::adaptiveSpeed.minFollowDistance) {
                     zoneColor = cv::Scalar(0, 100, 255);  // Orange - danger
-                } else if (avgDistance < targetFollowingDistance) {
+                } else if (avgDistance < Config::adaptiveSpeed.followDistance) {
                     zoneColor = cv::Scalar(0, 255, 255);  // Yellow - caution
                 } else {
                     zoneColor = cv::Scalar(0, 255, 0);  // Green - safe

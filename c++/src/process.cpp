@@ -77,7 +77,7 @@ int runVideo(const std::string &path, Detect &model) {
     LaneDetector laneDetector;
 
     // --- Ego Vehicle Control Variables ---
-    float currentEgoSpeed = initialSpeedKph;
+    float currentEgoSpeed = Config::adaptiveSpeed.initial;
     double lastSpeedUpdateTime = 0;
     std::deque<float> speedChangeHistory;
     std::deque<float> distanceHistory;
@@ -306,45 +306,47 @@ void drawHUD(cv::Mat &image, float currentEgoSpeed, int accSpeed, int accMaxSpee
              float frontSpeed, float avgDistance, const std::string &action,
              const cv::Scalar &actionColor, double fps, int targetId) {
     // 1. FPS
-    cv::putText(image, cv::format("FPS: %.1f", fps), {10, 30}, cv::FONT_HERSHEY_SIMPLEX, 0.7, white,
-                2);
+    cv::putText(image, cv::format("FPS: %.1f", fps), {10, 30}, cv::FONT_HERSHEY_SIMPLEX, 0.7,
+                Config::hudColors.white, 2);
 
     // 2. Speed Limit
     if (maxSpeed != -1) {
         cv::putText(image, "Max Speed: " + std::to_string(maxSpeed) + " Km/h", {10, 60},
-                    cv::FONT_HERSHEY_SIMPLEX, 0.7, red, 2);
+                    cv::FONT_HERSHEY_SIMPLEX, 0.7, Config::hudColors.red, 2);
     } else {
-        cv::putText(image, "No Speed Limit Detected", {10, 60}, cv::FONT_HERSHEY_SIMPLEX, 0.7, red,
-                    2);
+        cv::putText(image, "No Speed Limit Detected", {10, 60}, cv::FONT_HERSHEY_SIMPLEX, 0.7,
+                    Config::hudColors.red, 2);
     }
 
     // 3. Cruise Control
     cv::putText(image, "Cruise Control: " + std::to_string(accMaxSpeed) + " Km/h", {10, 90},
-                cv::FONT_HERSHEY_SIMPLEX, 0.7, yellow, 2);
+                cv::FONT_HERSHEY_SIMPLEX, 0.7, Config::hudColors.yellow, 2);
 
     // 4. Front Vehicle Speed & Distance
     if (targetId != -1 && avgDistance > 0) {
         cv::putText(image, "Front Speed: " + std::to_string((int)frontSpeed) + " Km/h", {10, 120},
-                    cv::FONT_HERSHEY_SIMPLEX, 0.8, orange, 2);
+                    cv::FONT_HERSHEY_SIMPLEX, 0.8, Config::hudColors.orange, 2);
 
         // Distance color zones
-        cv::Scalar zoneColor =
-            (avgDistance < criticalDistance)          ? cv::Scalar(0, 0, 255)    // Red
-            : (avgDistance < minFollowingDistance)    ? cv::Scalar(0, 128, 255)  // Orange
-            : (avgDistance < targetFollowingDistance) ? cv::Scalar(0, 255, 255)  // Yellow
-                                                      : cv::Scalar(0, 255, 0);   // Green
+        cv::Scalar zoneColor = (avgDistance < Config::adaptiveSpeed.cruise)
+                                   ? cv::Scalar(0, 0, 255)  // Red
+                               : (avgDistance < Config::adaptiveSpeed.minFollowDistance)
+                                   ? cv::Scalar(0, 128, 255)  // Orange
+                               : (avgDistance < Config::adaptiveSpeed.followDistance)
+                                   ? cv::Scalar(0, 255, 255)  // Yellow
+                                   : cv::Scalar(0, 255, 0);   // Green
 
         cv::circle(image, {image.cols - 100, 100}, 30, zoneColor, -1);
         cv::putText(image, std::to_string((int)avgDistance) + "m", {image.cols - 120, 110},
-                    cv::FONT_HERSHEY_SIMPLEX, 0.5, white, 1);
+                    cv::FONT_HERSHEY_SIMPLEX, 0.5, Config::hudColors.white, 1);
     } else {
-        cv::putText(image, "Front Speed: -- km/h", {10, 120}, cv::FONT_HERSHEY_SIMPLEX, 0.8, gray,
-                    2);
+        cv::putText(image, "Front Speed: -- km/h", {10, 120}, cv::FONT_HERSHEY_SIMPLEX, 0.8,
+                    Config::hudColors.gray, 2);
     }
 
     // 5. Ego Vehicle Speed
     cv::putText(image, "Ego Speed: " + std::to_string((int)currentEgoSpeed) + " Km/h", {10, 150},
-                cv::FONT_HERSHEY_SIMPLEX, 0.8, green, 2);
+                cv::FONT_HERSHEY_SIMPLEX, 0.8, Config::hudColors.green, 2);
 
     // 6. Driving Action
     cv::putText(image, "Action: " + action, {10, 180}, cv::FONT_HERSHEY_SIMPLEX, 0.8, actionColor,
@@ -387,7 +389,7 @@ void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
                         cv::Scalar &actionColor) {
     if (targetId != -1 && bestBox.height > 0) {
         float h = bestBox.height;
-        float distance = (realObjectWidth * focalLength) / h;
+        float distance = (Config::camera.realObjectWidth * Config::camera.focalLength) / h;
 
         // Initialize if new
         if (objectBuffers.find(targetId) == objectBuffers.end()) {
@@ -413,12 +415,13 @@ void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
 
         // ✅ Always update smoothed speed
         double dt = timeStart - prevTimes[targetId];
-        if (dt >= minTimeDelta) {
+        if (dt >= Config::estimation.minTimeDelta) {
             float dDist = prevDistances[targetId] - avgDistance;
-            if (std::abs(dDist) >= minDistDelta) {
+            if (std::abs(dDist) >= Config::estimation.minDistDelta) {
                 float speed = (dDist / dt) * 3.6f;
                 smoothedSpeeds[targetId] =
-                    smoothingFactor * speed + (1 - smoothingFactor) * smoothedSpeeds[targetId];
+                    Config::estimation.smoothingFactor * speed +
+                    (1 - Config::estimation.smoothingFactor) * smoothedSpeeds[targetId];
                 prevDistances[targetId] = avgDistance;
                 prevTimes[targetId] = timeStart;
             }
@@ -429,7 +432,7 @@ void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
         frontSpeed = currentEgoSpeed - relativeSpeed;
 
         // Speed control logic (less frequent)
-        if (timeStart - lastSpeedUpdateTime >= speedUpdateInterval) {
+        if (timeStart - lastSpeedUpdateTime >= Config::adjustment.interval) {
             auto [state, urgency] = getDrivingState(avgDistance, frontSpeed, currentEgoSpeed);
             float targetSpeed =
                 calculateTargetSpeed(avgDistance, frontSpeed, currentEgoSpeed, state, urgency);
@@ -452,11 +455,12 @@ void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
         }
     } else {
         // No target: cruise mode
-        if (timeStart - lastSpeedUpdateTime >= speedUpdateInterval) {
-            if (std::abs(currentEgoSpeed - cruiseSpeedKph) > 1) {
-                currentEgoSpeed +=
-                    (currentEgoSpeed < cruiseSpeedKph) ? gentleAdjustment : -gentleAdjustment;
-                currentEgoSpeed = std::clamp(currentEgoSpeed, 0.0f, maxValidSpeedKph);
+        if (timeStart - lastSpeedUpdateTime >= Config::adjustment.interval) {
+            if (std::abs(currentEgoSpeed - Config::adaptiveSpeed.cruise) > 1) {
+                currentEgoSpeed += (currentEgoSpeed < Config::adaptiveSpeed.cruise)
+                                       ? Config::adjustment.gentle
+                                       : -Config::adjustment.gentle;
+                currentEgoSpeed = std::clamp(currentEgoSpeed, 0.0f, Config::adjustment.max);
             }
             lastSpeedUpdateTime = timeStart;
         }

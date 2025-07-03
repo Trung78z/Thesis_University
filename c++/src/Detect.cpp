@@ -263,8 +263,8 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
         int classId = detection.classId;
         float conf = detection.score;
 
-        cv::Scalar color(Config::colors[classId][0], Config::colors[classId][1],
-                         Config::colors[classId][2]);
+        cv::Scalar color(Config::tracking.colors[classId][0], Config::tracking.colors[classId][1],
+                         Config::tracking.colors[classId][2]);
 
         // Draw rectangle
         cv::rectangle(image, box, color, 2);
@@ -281,8 +281,8 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
 
         // Prepare and draw label with smaller font
         std::ostringstream label_ss;
-        label_ss << detection.track_id << ". " << Config::classNames[classId] << " " << std::fixed
-                 << std::setprecision(2) << conf;
+        label_ss << detection.track_id << ". " << Config::tracking.classNames[classId] << " "
+                 << std::fixed << std::setprecision(2) << conf;
 
         std::string label = label_ss.str();
 

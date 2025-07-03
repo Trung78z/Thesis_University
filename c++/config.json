@@ -1,0 +1,61 @@
+{
+  "camera": {
+    "width": 1280,
+    "height": 720,
+    "fps": 30,
+    "focal_length": 1778.0,
+    "real_object_width": 0.7
+  },
+  "roi": {
+    "x_min": 290.0,
+    "x_max": 330.0
+  },
+  "estimation": {
+    "max_valid_speed_kph": 90.0,
+    "min_dist_delta": 0.3,
+    "smoothing_factor": 0.2,
+    "min_time_delta": 0.15,
+    "min_speed_threshold": 2.0
+  },
+  "adaptive_speed": {
+    "initial": 60.0,
+    "cruise": 80.0,
+    "follow_distance": 25.0,
+    "min_follow_distance": 10.0,
+    "critical_distance": 5.0
+  },
+  "adjustment": {
+    "interval": 0.5,
+    "gentle": 1.0,
+    "moderate": 5.0,
+    "aggressive": 10.0,
+    "min": 20.0,
+    "max": 120.0
+  },
+  "tracking": {
+    "track_classes": [0, 1, 2, 3, 5, 7],
+    "class_names": [
+      "person", "bicycle", "car", "motorcycle", "bus", "truck",
+      "stop sign", "other-vehicle", "crosswalk",
+      "red light", "yellow light", "green light",
+      "Limit 30km-h", "Limit 40km-h", "Limit 50km-h",
+      "Limit 60km-h", "Limit 70km-h", "Limit 80km-h",
+      "End Limit 60km-h", "End Limit 70km-h", "End Limit 80km-h"
+    ],
+    "colors": [
+      [220, 20, 60], [119, 172, 48], [0, 114, 189], [237, 177, 32], [126, 47, 142],
+      [217, 83, 25], [255, 0, 0], [153, 153, 153], [255, 255, 255], [255, 0, 0],
+      [255, 255, 0], [0, 255, 0], [170, 255, 0], [200, 255, 0], [255, 255, 0],
+      [255, 200, 0], [255, 170, 0], [255, 85, 0], [180, 180, 180], [140, 140, 140],
+      [100, 100, 100]
+    ]
+  },
+  "hud_colors": {
+    "white": [255, 255, 255],
+    "red": [68, 68, 255],
+    "yellow": [0, 255, 255],
+    "orange": [0, 165, 255],
+    "green": [102, 255, 102],
+    "gray": [180, 180, 180]
+  }
+}

@@ -17,6 +17,9 @@ include(FindTensorRTConfig)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
+find_package(nlohmann_json REQUIRED)
+
+
 # Gather all cpp/cu files EXCEPT main.cpp and test.cpp
 file(GLOB_RECURSE ALL_SOURCES src/*.cpp src/*.cu)
 
@@ -59,7 +62,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
 add_executable(${PROJECT_NAME} ${MAIN_ENTRY} ${SHARED_SOURCES})
 target_link_libraries(
   ${PROJECT_NAME} PRIVATE ${OpenCV_LIBS} ${TensorRT_LIBRARIES}
-                          ${CUDA_LIBRARIES} cudart bytetrack)
+                          ${CUDA_LIBRARIES} cudart bytetrack nlohmann_json::nlohmann_json)
 set_target_properties(
   ${PROJECT_NAME}
   PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH_LIST}"
@@ -72,7 +75,7 @@ set_target_properties(
 # Test executable
 add_executable(test ${TEST_ENTRY} ${SHARED_SOURCES})
 target_link_libraries(test PRIVATE ${OpenCV_LIBS} ${TensorRT_LIBRARIES}
-                                   ${CUDA_LIBRARIES} cudart bytetrack)
+                                   ${CUDA_LIBRARIES} cudart bytetrack nlohmann_json::nlohmann_json)
 set_target_properties(
   test
   PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH_LIST}"
