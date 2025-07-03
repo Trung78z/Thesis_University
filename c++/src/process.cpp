@@ -77,7 +77,7 @@ int runVideo(const std::string &path, Detect &model) {
     LaneDetector laneDetector;
 
     // --- Ego Vehicle Control Variables ---
-    float currentEgoSpeed = initialSpeedKph;
+    float currentEgoSpeed = config.speedControl.initialSpeedKph;
     double lastSpeedUpdateTime = 0;
     std::deque<float> speedChangeHistory;
     std::deque<float> distanceHistory;
@@ -328,11 +328,13 @@ void drawHUD(cv::Mat &image, float currentEgoSpeed, int accSpeed, int accMaxSpee
                     cv::FONT_HERSHEY_SIMPLEX, 0.8, orange, 2);
 
         // Distance color zones
-        cv::Scalar zoneColor =
-            (avgDistance < criticalDistance)          ? cv::Scalar(0, 0, 255)    // Red
-            : (avgDistance < minFollowingDistance)    ? cv::Scalar(0, 128, 255)  // Orange
-            : (avgDistance < targetFollowingDistance) ? cv::Scalar(0, 255, 255)  // Yellow
-                                                      : cv::Scalar(0, 255, 0);   // Green
+        cv::Scalar zoneColor = (avgDistance < config.speedControl.criticalDistance)
+                                   ? cv::Scalar(0, 0, 255)  // Red
+                               : (avgDistance < config.speedControl.minFollowingDistance)
+                                   ? cv::Scalar(0, 128, 255)  // Orange
+                               : (avgDistance < config.speedControl.targetFollowingDistance)
+                                   ? cv::Scalar(0, 255, 255)  // Yellow
+                                   : cv::Scalar(0, 255, 0);   // Green
 
         cv::circle(image, {image.cols - 100, 100}, 30, zoneColor, -1);
         cv::putText(image, std::to_string((int)avgDistance) + "m", {image.cols - 120, 110},
@@ -387,7 +389,7 @@ void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
                         cv::Scalar &actionColor) {
     if (targetId != -1 && bestBox.height > 0) {
         float h = bestBox.height;
-        float distance = (realObjectWidth * focalLength) / h;
+        float distance = (config.camera.realObjectWidth * config.camera.focalLength) / h;
 
         // Initialize if new
         if (objectBuffers.find(targetId) == objectBuffers.end()) {
@@ -413,12 +415,13 @@ void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
 
         // ✅ Always update smoothed speed
         double dt = timeStart - prevTimes[targetId];
-        if (dt >= minTimeDelta) {
+        if (dt >= config.distanceSpeed.minTimeDelta) {
             float dDist = prevDistances[targetId] - avgDistance;
-            if (std::abs(dDist) >= minDistDelta) {
+            if (std::abs(dDist) >= config.distanceSpeed.minDistDelta) {
                 float speed = (dDist / dt) * 3.6f;
                 smoothedSpeeds[targetId] =
-                    smoothingFactor * speed + (1 - smoothingFactor) * smoothedSpeeds[targetId];
+                    config.distanceSpeed.smoothingFactor * speed +
+                    (1 - config.distanceSpeed.smoothingFactor) * smoothedSpeeds[targetId];
                 prevDistances[targetId] = avgDistance;
                 prevTimes[targetId] = timeStart;
             }
@@ -429,7 +432,7 @@ void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
         frontSpeed = currentEgoSpeed - relativeSpeed;
 
         // Speed control logic (less frequent)
-        if (timeStart - lastSpeedUpdateTime >= speedUpdateInterval) {
+        if (timeStart - lastSpeedUpdateTime >= config.speedAdjustment.speedUpdateInterval) {
             auto [state, urgency] = getDrivingState(avgDistance, frontSpeed, currentEgoSpeed);
             float targetSpeed =
                 calculateTargetSpeed(avgDistance, frontSpeed, currentEgoSpeed, state, urgency);
@@ -452,11 +455,13 @@ void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
         }
     } else {
         // No target: cruise mode
-        if (timeStart - lastSpeedUpdateTime >= speedUpdateInterval) {
-            if (std::abs(currentEgoSpeed - cruiseSpeedKph) > 1) {
-                currentEgoSpeed +=
-                    (currentEgoSpeed < cruiseSpeedKph) ? gentleAdjustment : -gentleAdjustment;
-                currentEgoSpeed = std::clamp(currentEgoSpeed, 0.0f, maxValidSpeedKph);
+        if (timeStart - lastSpeedUpdateTime >= config.speedAdjustment.speedUpdateInterval) {
+            if (std::abs(currentEgoSpeed - config.speedControl.cruiseSpeedKph) > 1) {
+                currentEgoSpeed += (currentEgoSpeed < config.speedControl.cruiseSpeedKph)
+                                       ? config.speedAdjustment.gentleAdjustment
+                                       : -config.speedAdjustment.gentleAdjustment;
+                currentEgoSpeed =
+                    std::clamp(currentEgoSpeed, 0.0f, config.distanceSpeed.maxValidSpeedKph);
             }
             lastSpeedUpdateTime = timeStart;
         }

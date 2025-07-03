@@ -4,7 +4,7 @@ project(detection LANGUAGES CXX CUDA)
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+find_package(nlohmann_json REQUIRED)
 # Include cmake modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -58,8 +58,9 @@ include_directories(${CMAKE_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
 # Main executable
 add_executable(${PROJECT_NAME} ${MAIN_ENTRY} ${SHARED_SOURCES})
 target_link_libraries(
-  ${PROJECT_NAME} PRIVATE ${OpenCV_LIBS} ${TensorRT_LIBRARIES}
-                          ${CUDA_LIBRARIES} cudart bytetrack)
+  ${PROJECT_NAME}
+  PRIVATE ${OpenCV_LIBS} ${TensorRT_LIBRARIES} ${CUDA_LIBRARIES} cudart
+          bytetrack nlohmann_json::nlohmann_json)
 set_target_properties(
   ${PROJECT_NAME}
   PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH_LIST}"
@@ -71,8 +72,9 @@ set_target_properties(
 
 # Test executable
 add_executable(test ${TEST_ENTRY} ${SHARED_SOURCES})
-target_link_libraries(test PRIVATE ${OpenCV_LIBS} ${TensorRT_LIBRARIES}
-                                   ${CUDA_LIBRARIES} cudart bytetrack)
+target_link_libraries(
+  test PRIVATE ${OpenCV_LIBS} ${TensorRT_LIBRARIES} ${CUDA_LIBRARIES} cudart
+               bytetrack nlohmann_json::nlohmann_json)
 set_target_properties(
   test
   PROPERTIES CUDA_ARCHITECTURES "${CUDA_ARCH_LIST}"

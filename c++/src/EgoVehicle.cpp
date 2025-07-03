@@ -1,12 +1,13 @@
 #include <EgoVehicle.h>
+using namespace Config;
 
 // --- Function to get driving state ---
 std::pair<std::string, int> getDrivingState(float distance, float frontSpeed, float egoSpeed) {
-    if (distance < criticalDistance) {
+    if (distance < config.speedControl.criticalDistance) {
         return {"EMERGENCY_BRAKE", 3};
-    } else if (distance < minFollowingDistance) {
+    } else if (distance < config.speedControl.minFollowingDistance) {
         return {"CLOSE_FOLLOW", 2};
-    } else if (distance < targetFollowingDistance) {
+    } else if (distance < config.speedControl.targetFollowingDistance) {
         if (frontSpeed < egoSpeed - 15) {
             return {"SLOW_TRAFFIC", 2};
         } else {
@@ -22,15 +23,15 @@ float calculateTargetSpeed(float distance, float frontSpeed, float egoSpeed,
                            const std::string& drivingState, int urgency) {
     if (drivingState == "EMERGENCY_BRAKE") {
         // Emergency: reduce to 70% of current speed immediately
-        return std::max(minSpeedKph, egoSpeed * 0.7f);
+        return std::max(config.speedAdjustment.minSpeedKph, egoSpeed * 0.7f);
     } else if (drivingState == "CLOSE_FOLLOW") {
         // Too close: match front vehicle speed with safety margin
         float safetyMargin = 0.9f;  // 90% of front vehicle speed
-        return std::max(minSpeedKph, frontSpeed * safetyMargin);
+        return std::max(config.speedAdjustment.minSpeedKph, frontSpeed * safetyMargin);
     } else if (drivingState == "SLOW_TRAFFIC") {
         // Slow traffic ahead: gradually reduce speed
         float slowTrafficSpeedMargin = 1.1f;
-        return std::max(minSpeedKph,
+        return std::max(config.speedAdjustment.minSpeedKph,
                         std::min(frontSpeed * slowTrafficSpeedMargin, egoSpeed * 0.95f));
     } else if (drivingState == "NORMAL_FOLLOW") {
         // Normal following: maintain similar speed to front vehicle
@@ -42,7 +43,7 @@ float calculateTargetSpeed(float distance, float frontSpeed, float egoSpeed,
         }
     } else {  // FREE_DRIVE
         // No obstacles: can return to cruise speed
-        return cruiseSpeedKph;
+        return config.speedControl.cruiseSpeedKph;
     }
 }
 
@@ -85,17 +86,18 @@ float updateEgoSpeedSmooth(float currentSpeed, float targetSpeed, int urgencyLev
     // Determine adjustment rate
     float maxChange;
     if (urgencyLevel >= 3) {
-        maxChange = aggressiveAdjustment;
+        maxChange = config.speedAdjustment.aggressiveAdjustment;
     } else if (urgencyLevel >= 2) {
-        maxChange = moderateAdjustment;
+        maxChange = config.speedAdjustment.moderateAdjustment;
     } else if (urgencyLevel >= 1) {
-        maxChange = gentleAdjustment;
+        maxChange = config.speedAdjustment.gentleAdjustment;
     } else {
-        maxChange = gentleAdjustment * 0.5f;
+        maxChange = config.speedAdjustment.gentleAdjustment * 0.5f;
     }
 
     // Time-based scaling
-    float timeFactor = std::min(dt / speedUpdateInterval, 2.0f);  // Cap at 2x
+    float timeFactor =
+        std::min(dt / config.speedAdjustment.speedUpdateInterval, 2.0f);  // Cap at 2x
     maxChange *= timeFactor;
 
     float newSpeed;
@@ -108,7 +110,8 @@ float updateEgoSpeedSmooth(float currentSpeed, float targetSpeed, int urgencyLev
     }
 
     // Clamp to min/max speed
-    newSpeed = std::clamp(newSpeed, minSpeedKph, maxSpeedKph);
+    newSpeed = std::clamp(newSpeed, config.speedAdjustment.minSpeedKph,
+                          config.speedAdjustment.maxSpeedKph);
 
     return newSpeed;
 }
