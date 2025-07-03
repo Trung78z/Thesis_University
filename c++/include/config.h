@@ -45,7 +45,7 @@ struct DistanceSpeedEstimation {
 
 struct AdaptiveSpeedControl {
     float initialSpeedKph;
-    float cruiseSpeedKph;
+    int cruiseSpeedKph;
     float targetFollowingDistance;
     float minFollowingDistance;
     float criticalDistance;

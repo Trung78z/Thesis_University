@@ -264,7 +264,6 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
         cv::Rect box(tlwh[0], tlwh[1], tlwh[2], tlwh[3]);
 
         int classId = detection.classId;
-        float conf = detection.score;
 
         cv::Scalar color(config.objectTracking.colors[classId][0],
                          config.objectTracking.colors[classId][1],
@@ -285,14 +284,19 @@ void Detect::draw(cv::Mat &image, const std::vector<STrack> &output) {
 
         // Prepare and draw label with smaller font
         std::ostringstream label_ss;
-        label_ss << detection.track_id << ". " << config.objectTracking.classNames[classId] << " "
-                 << std::fixed << std::setprecision(2) << conf;
+        label_ss << config.objectTracking.classNames[classId] << "."
+                 << std::fixed << std::setprecision(2) << detection.score;
 
         std::string label = label_ss.str();
 
         // Smaller font for main label
         cv::putText(image, label, cv::Point(box.x + 2, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.4,
                     cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+
+
+        cv::putText(image, cv::format("%d",detection.track_id), cv::Point(box.x + 2, box.y + box.height - 5),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255),
+                    1, cv::LINE_AA);
     }
 }
 
