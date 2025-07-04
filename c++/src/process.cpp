@@ -95,6 +95,11 @@ int runVideo(const std::string &path, Detect &model) {
     int lostTargetCount = 0;
     const int MAX_LOST_FRAMES = 5;
 
+    // Switching criteria thresholds
+    const float DISTANCE_THRESHOLD = 50.0f;  // pixels - how much closer new target must be
+    const int FRAMES_OUTSIDE_LANE = 10;      // frames current target has been outside lane
+    static int framesCurrentTargetOutsideLane = 0;
+
     while (cap.isOpened()) {
         auto now = std::chrono::steady_clock::now();
         auto start = std::chrono::system_clock::now();
@@ -132,11 +137,6 @@ int runVideo(const std::string &path, Detect &model) {
         bool currentTargetStillExists = false;
         bool currentTargetInLane = false;
         float currentTargetBottomY = -1;
-
-        // Switching criteria thresholds
-        const float DISTANCE_THRESHOLD = 50.0f;  // pixels - how much closer new target must be
-        const int FRAMES_OUTSIDE_LANE = 10;      // frames current target has been outside lane
-        static int framesCurrentTargetOutsideLane = 0;
 
         // First, check if our current target still exists and update its bounding box
         if (targetId != -1) {
@@ -264,21 +264,7 @@ int runVideo(const std::string &path, Detect &model) {
                                        smoothedSpeeds, speedChangeHistory, avgDistance,
                                        frontAbsoluteSpeed, action, actionColor);
 
-        // Always display information on frame
-        drawHUD(image, currentEgoSpeed, accSpeed, maxSpeed, frontAbsoluteSpeed, avgDistance, action,
-                actionColor, fps, targetId);
-
         laneDetector.drawLanes(image, lanes);
-
-        // fps calculation
-        frameCount++;
-
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - fpsStartTime).count();
-        if (elapsed >= 1) {
-            fps = frameCount / static_cast<double>(elapsed);
-            frameCount = 0;
-            fpsStartTime = now;
-        }
 
         if (maxSpeed != -1) {
             if (accSpeed < maxSpeed && accSpeed < config.speedControl.cruiseSpeedKph) {
@@ -290,7 +276,19 @@ int runVideo(const std::string &path, Detect &model) {
             accSpeed = config.speedControl
                            .cruiseSpeedKph;  // Reset to max speed if no speed limit detected
         }
+        // fps calculation
+        frameCount++;
 
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - fpsStartTime).count();
+        if (elapsed >= 1) {
+            fps = frameCount / static_cast<double>(elapsed);
+            frameCount = 0;
+            fpsStartTime = now;
+        }
+
+        // Always display information on frame
+        drawHUD(image, currentEgoSpeed, accSpeed, maxSpeed, frontAbsoluteSpeed, avgDistance, action,
+                actionColor, fps, targetId);
         cv::imshow("Result", image);
         if (cv::waitKey(1) == 'q') {  // Press 'q' to exit
             break;
@@ -354,11 +352,10 @@ void drawHUD(cv::Mat &image, float currentEgoSpeed, int accSpeed, int maxSpeed, 
                 2);
     // 7. Target ID
     if (targetId != -1) {
-        cv::putText(image, "Flow car id: " + std::to_string(targetId
-                ), {10, 210}, cv::FONT_HERSHEY_SIMPLEX, 0.8, white, 2);
+        cv::putText(image, "Flow car id: " + std::to_string(targetId), {10, 210},
+                    cv::FONT_HERSHEY_SIMPLEX, 0.8, white, 2);
     } else {
-        cv::putText(image, "No flow", {10, 210},
-                    cv::FONT_HERSHEY_SIMPLEX, 0.8, gray, 2);
+        cv::putText(image, "No flow", {10, 210}, cv::FONT_HERSHEY_SIMPLEX, 0.8, gray, 2);
     }
 }
 
