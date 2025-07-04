@@ -10,27 +10,44 @@
 #include <opencv2/core.hpp>
 #include <string>
 #include <tuple>
-
-class EgoVehicle {
-   public:
-    static void updateSpeedControl(double timeStart, int targetId, const cv::Rect &bestBox,
-                                   float &currentEgoSpeed, double &lastSpeedUpdateTime,
-                                   std::map<int, std::deque<float>> &objectBuffers,
-                                   std::map<int, float> &prevDistances,
-                                   std::map<int, double> &prevTimes,
-                                   std::map<int, float> &smoothedSpeeds,
-                                   std::deque<float> &speedChangeHistory, float &avgDistance,
-                                   float &frontSpeed, std::string &action, cv::Scalar &actionColor);
-
-   private:
-    static float updateEgoSpeedSmooth(float currentSpeed, float targetSpeed, int urgencyLevel,
-                                      float dt);
-    static void getActionAndColor(const std::string &drivingState, float speedChange,
-                                  std::string &action, cv::Scalar &color);
-    static std::pair<std::string, int> getDrivingState(float distance, float frontSpeed,
-                                                       float egoSpeed);
-    static float calculateTargetSpeed(float distance, float frontSpeed, float egoSpeed,
-                                      const std::string &drivingState, int urgency);
+enum class DrivingState {
+    emergencyBrake,
+    closeFollow,
+    slowTraffic,
+    normalFollow,
+    freeDrive
 };
 
-#endif  // _EGO_VEHICLE_H
+class EgoVehicle {
+public:
+    void updateSpeedControl(double timeStart, int targetId,
+                            const cv::Rect &bestBox, float &currentEgoSpeed,
+                            double &lastSpeedUpdateTime,
+                            std::map<int, std::deque<float>> &objectBuffers,
+                            std::map<int, float> &prevDistances,
+                            std::map<int, double> &prevTimes,
+                            std::map<int, float> &smoothedSpeeds,
+                            std::deque<float> &speedChangeHistory,
+                            float &avgDistance, float &frontSpeed,
+                            std::string &action, cv::Scalar &actionColor);
+
+    float getThrottleCmd() const { return throttleCmd_; }
+    float getBrakeCmd() const { return brakeCmd_; }
+
+private:
+    float throttleCmd_;
+    float brakeCmd_;
+    float updateEgoSpeedSmooth(float currentSpeed, float targetSpeed,
+                               int urgencyLevel, float dt);
+
+    void getActionAndColor(DrivingState drivingState, float speedChange,
+                           float egoSpeed, std::string &action,
+                           cv::Scalar &color);
+
+    std::pair<DrivingState, int>
+    getDrivingState(float distance, float frontSpeed, float egoSpeed);
+    float calculateTargetSpeed(float distance, float frontSpeed, float egoSpeed,
+                               DrivingState drivingState, int urgency);
+};
+
+#endif // _EGO_VEHICLE_H

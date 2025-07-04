@@ -15,14 +15,24 @@ using namespace Config;
 class Logger : public nvinfer1::ILogger {
     void log(Severity severity, const char *msg) noexcept override {
         // Only output logs with severity greater than warning
-        if (severity <= Severity::kWARNING) std::cout << msg << std::endl;
+        if (severity <= Severity::kWARNING)
+            std::cout << msg << std::endl;
     }
 } logger;
 
 int main(int argc, char **argv) {
     try {
+        // Load configuration from JSON file
+        std::cout << "🔧 Loading configuration..." << std::endl;
+        Config::loadConfig("config.json");
+        CameraSettings cameraSettings = Config::config.camera;
+        std::cout << cameraSettings.focalLength << "focalLength"
+                  << cameraSettings.realObjectWidth << " @ "
+                  << cameraSettings.fps << " FPS\n";
+        std::cout << "✅ Configuration loaded successfully.\n";
+        STrack::initializeEstimator();
         // --- Ego Vehicle Control Variables ---
-        float currentEgoSpeed = initialSpeedKph;
+        float currentEgoSpeed = config.speedControl.initialSpeedKph;
         double lastSpeedUpdateTime = 0;
         std::deque<float> speedChangeHistory;
         std::deque<float> distanceHistory;
@@ -33,10 +43,13 @@ int main(int argc, char **argv) {
         std::map<int, double> prevTimes;
         std::map<int, float> smoothedSpeeds;
 
-        cxxopts::Options options("test", "Run inference on a video or images (choose only one)");
+        cxxopts::Options options(
+            "test", "Run inference on a video or images (choose only one)");
 
-        options.add_options()("v,video", "Video path", cxxopts::value<std::string>())(
-            "m,engine", "Engine path", cxxopts::value<std::string>())("h,help", "Print usage");
+        options.add_options()("v,video", "Video path",
+                              cxxopts::value<std::string>())(
+            "m,engine", "Engine path",
+            cxxopts::value<std::string>())("h,help", "Print usage");
 
         auto result = options.parse(argc, argv);
 
@@ -56,16 +69,19 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        if (result.count("video")) videoPath = result["video"].as<std::string>();
+        if (result.count("video"))
+            videoPath = result["video"].as<std::string>();
 
         // Ensure only one of --video or --images is provided
         if (!videoPath.empty() && !imagePath.empty()) {
-            std::cerr << "❌ Error: Please provide either --video or --images, not both.\n";
+            std::cerr << "❌ Error: Please provide either --video or --images, "
+                         "not both.\n";
             return 1;
         }
 
         if (videoPath.empty() && imagePath.empty()) {
-            std::cerr << "❌ Error: You must provide either --video or --images.\n";
+            std::cerr
+                << "❌ Error: You must provide either --video or --images.\n";
             return 1;
         }
 
@@ -90,7 +106,7 @@ int main(int argc, char **argv) {
         double fps = static_cast<int>(cap.get(cv::CAP_PROP_FPS));
 
         BYTETracker tracker(fps, 30);
-
+        EgoVehicle egoVehicle;
         while (cap.isOpened()) {
             auto now = std::chrono::steady_clock::now();
             auto start = std::chrono::system_clock::now();
@@ -117,8 +133,8 @@ int main(int argc, char **argv) {
             std::vector<STrack> outputStracks = tracker.update(objects);
 
             // Draw center zone
-            // cv::rectangle(image, cv::Point(xMin, 0), cv::Point(xMax, image.rows),
-            // cv::Scalar(255, 255, 0), 2);
+            // cv::rectangle(image, cv::Point(xMin, 0), cv::Point(xMax,
+            // image.rows), cv::Scalar(255, 255, 0), 2);
 
             // --- Ego Vehicle Speed Control Logic ---
             int targetId = -1;
@@ -126,63 +142,79 @@ int main(int argc, char **argv) {
             cv::Rect bestBox;
 
             // Process tracked detections
-            selectTarget(outputStracks, xMin, xMax, targetId, bestBox, maxHeight);
+            selectTarget(outputStracks, config.roi.xMin, config.roi.xMax,
+                         targetId, bestBox, maxHeight);
 
             // Speed control logic
             std::string action = "FREE DRIVE";
             cv::Scalar actionColor = cv::Scalar(0, 255, 0);
             float avgDistance = 0.0f;
             float frontAbsoluteSpeed = 0.0f;
-            updateSpeedControl(timeStart, targetId, bestBox, currentEgoSpeed, lastSpeedUpdateTime,
-                               objectBuffers, prevDistances, prevTimes, smoothedSpeeds,
-                               speedChangeHistory, avgDistance, frontAbsoluteSpeed, action,
-                               actionColor);
+            egoVehicle.updateSpeedControl(
+                timeStart, targetId, bestBox, currentEgoSpeed,
+                lastSpeedUpdateTime, objectBuffers, prevDistances, prevTimes,
+                smoothedSpeeds, speedChangeHistory, avgDistance,
+                frontAbsoluteSpeed, action, actionColor);
 
             // Always display information on frame
             if (targetId != -1 && avgDistance > 0) {
-                cv::putText(
-                    image, "Distance: " + std::to_string(static_cast<int>(avgDistance)) + " m",
-                    cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
                 cv::putText(image,
-                            "Front Speed: " + std::to_string(static_cast<int>(frontAbsoluteSpeed)) +
-                                " km/h",
-                            cv::Point(20, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 0),
-                            2);
+                            "Distance: " +
+                                std::to_string(static_cast<int>(avgDistance)) +
+                                " m",
+                            cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8,
+                            cv::Scalar(0, 255, 0), 2);
+                cv::putText(
+                    image,
+                    "Front Speed: " +
+                        std::to_string(static_cast<int>(frontAbsoluteSpeed)) +
+                        " km/h",
+                    cv::Point(20, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8,
+                    cv::Scalar(255, 0, 0), 2);
 
                 // Draw distance zones indicator
                 cv::Scalar zoneColor;
-                if (avgDistance < criticalDistance) {
-                    zoneColor = cv::Scalar(0, 0, 255);  // Red - emergency
-                } else if (avgDistance < minFollowingDistance) {
-                    zoneColor = cv::Scalar(0, 100, 255);  // Orange - danger
-                } else if (avgDistance < targetFollowingDistance) {
-                    zoneColor = cv::Scalar(0, 255, 255);  // Yellow - caution
+                if (avgDistance < config.speedControl.criticalDistance) {
+                    zoneColor = cv::Scalar(0, 0, 255); // Red - emergency
+                } else if (avgDistance <
+                           config.speedControl.minFollowingDistance) {
+                    zoneColor = cv::Scalar(0, 100, 255); // Orange - danger
+                } else if (avgDistance <
+                           config.speedControl.targetFollowingDistance) {
+                    zoneColor = cv::Scalar(0, 255, 255); // Yellow - caution
                 } else {
-                    zoneColor = cv::Scalar(0, 255, 0);  // Green - safe
+                    zoneColor = cv::Scalar(0, 255, 0); // Green - safe
                 }
 
-                cv::circle(image, cv::Point(image.cols - 100, 100), 30, zoneColor, -1);
-                cv::putText(image, std::to_string(static_cast<int>(avgDistance)) + "m",
-                            cv::Point(image.cols - 120, 110), cv::FONT_HERSHEY_SIMPLEX, 0.5,
-                            cv::Scalar(255, 255, 255), 1);
+                cv::circle(image, cv::Point(image.cols - 100, 100), 30,
+                           zoneColor, -1);
+                cv::putText(
+                    image, std::to_string(static_cast<int>(avgDistance)) + "m",
+                    cv::Point(image.cols - 120, 110), cv::FONT_HERSHEY_SIMPLEX,
+                    0.5, cv::Scalar(255, 255, 255), 1);
             } else {
-                cv::putText(image, "Distance: -- m", cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX,
-                            0.8, cv::Scalar(128, 128, 128), 2);
+                cv::putText(image, "Distance: -- m", cv::Point(20, 40),
+                            cv::FONT_HERSHEY_SIMPLEX, 0.8,
+                            cv::Scalar(128, 128, 128), 2);
                 cv::putText(image, "Front Speed: -- km/h", cv::Point(20, 80),
-                            cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(128, 128, 128), 2);
+                            cv::FONT_HERSHEY_SIMPLEX, 0.8,
+                            cv::Scalar(128, 128, 128), 2);
             }
 
             // Always show ego speed and action
-            cv::putText(
-                image, "Ego Speed: " + std::to_string(static_cast<int>(currentEgoSpeed)) + " km/h",
-                cv::Point(20, 120), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 255, 255), 2);
-            cv::putText(image, "Action: " + action, cv::Point(20, 160), cv::FONT_HERSHEY_SIMPLEX,
-                        0.8, actionColor, 2);
+            cv::putText(image,
+                        "Ego Speed: " +
+                            std::to_string(static_cast<int>(currentEgoSpeed)) +
+                            " km/h",
+                        cv::Point(20, 120), cv::FONT_HERSHEY_SIMPLEX, 0.8,
+                        cv::Scalar(255, 255, 255), 2);
+            cv::putText(image, "Action: " + action, cv::Point(20, 160),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.8, actionColor, 2);
 
             model.draw(image, outputStracks);
 
             cv::imshow("Improved Adaptive Speed Control", image);
-            if (cv::waitKey(1) == 'q') {  // Press 'q' to exit
+            if (cv::waitKey(1) == 'q') { // Press 'q' to exit
                 break;
             }
         }

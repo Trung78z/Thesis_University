@@ -1,88 +1,120 @@
 #include <EgoVehicle.h>
-using namespace Config;
 
+#include <algorithm>
+using namespace Config;
 // --- Function to get driving state ---
-std::pair<std::string, int> EgoVehicle::getDrivingState(float distance, float frontSpeed,
-                                                        float egoSpeed) {
-    if (distance < config.speedControl.criticalDistance) {
-        return {"EMERGENCY_BRAKE", 3};
-    } else if (distance < config.speedControl.minFollowingDistance) {
-        return {"CLOSE_FOLLOW", 2};
-    } else if (distance < config.speedControl.targetFollowingDistance) {
-        if (frontSpeed < egoSpeed - 15) {
-            return {"SLOW_TRAFFIC", 2};
+std::pair<DrivingState, int>
+EgoVehicle::getDrivingState(float distance, float frontSpeed, float egoSpeed) {
+    const float speedDiff = egoSpeed - frontSpeed;
+    const float closeGap = config.speedControl.minFollowingDistance;
+    const float safeGap = config.speedControl.targetFollowingDistance;
+    const float criticalGap = config.speedControl.criticalDistance;
+
+    if (distance < criticalGap) {
+        return {DrivingState::emergencyBrake, 3};
+    } else if (distance < closeGap) {
+        return {DrivingState::closeFollow, 2};
+    } else if (distance < safeGap) {
+        if (speedDiff > 10) {
+            return {DrivingState::slowTraffic, 2};
         } else {
-            return {"NORMAL_FOLLOW", 1};
+            return {DrivingState::normalFollow, 1};
         }
     } else {
-        return {"FREE_DRIVE", 0};
+        if (speedDiff > 20) {
+            return {DrivingState::slowTraffic, 1};
+        }
+        return {DrivingState::freeDrive, 0};
     }
 }
 
 // --- Function to calculate target speed ---
-float EgoVehicle::calculateTargetSpeed(float distance, float frontSpeed, float egoSpeed,
-                                       const std::string &drivingState, int urgency) {
-    if (drivingState == "EMERGENCY_BRAKE") {
-        // Emergency: reduce to 70% of current speed immediately
-        return std::max(config.speedAdjustment.minSpeedKph, egoSpeed * 0.7f);
-    } else if (drivingState == "CLOSE_FOLLOW") {
-        // Too close: match front vehicle speed with safety margin
-        float safetyMargin = 0.9f;  // 90% of front vehicle speed
-        return std::max(config.speedAdjustment.minSpeedKph, frontSpeed * safetyMargin);
-    } else if (drivingState == "SLOW_TRAFFIC") {
-        // Slow traffic ahead: gradually reduce speed
-        float slowTrafficSpeedMargin = 1.1f;
-        return std::max(config.speedAdjustment.minSpeedKph,
-                        std::min(frontSpeed * slowTrafficSpeedMargin, egoSpeed * 0.95f));
-    } else if (drivingState == "NORMAL_FOLLOW") {
-        // Normal following: maintain similar speed to front vehicle
-        if (std::abs(frontSpeed - egoSpeed) < 5) {
-            return egoSpeed;  // Already at good speed
-        } else {
-            // Gradually converge to front vehicle speed
-            return frontSpeed * 0.98f;
-        }
-    } else {  // FREE_DRIVE
-        // No obstacles: can return to cruise speed
+float EgoVehicle::calculateTargetSpeed(float distance, float frontSpeed,
+                                       float egoSpeed,
+                                       DrivingState drivingState, int urgency) {
+    const float minSpeed = config.speedAdjustment.minSpeedKph;
+    const float maxSpeed = config.speedAdjustment.maxSpeedKph;
+
+    switch (drivingState) {
+    case DrivingState::emergencyBrake:
+        return std::max(minSpeed, egoSpeed * 0.5f);
+    case DrivingState::closeFollow:
+        return std::clamp(frontSpeed * 0.9f, minSpeed, egoSpeed);
+    case DrivingState::slowTraffic:
+        return std::clamp(std::min(frontSpeed * 1.05f, egoSpeed * 0.95f),
+                          minSpeed, egoSpeed);
+    case DrivingState::normalFollow:
+        if (std::abs(frontSpeed - egoSpeed) < 3.0f)
+            return egoSpeed;
+        return std::clamp(frontSpeed, minSpeed, maxSpeed);
+    case DrivingState::freeDrive:
+    default:
         return config.speedControl.cruiseSpeedKph;
     }
 }
 
-void EgoVehicle::getActionAndColor(const std::string &drivingState, float speedChange,
-                                   std::string &action, cv::Scalar &color) {
-    if (drivingState == "EMERGENCY_BRAKE") {
-        action = "EMERGENCY BRAKE";
-        color = cv::Scalar(0, 0, 255);  // Red
-    } else if (drivingState == "CLOSE_FOLLOW") {
-        action = "BRAKE/SLOW";
-        color = cv::Scalar(0, 100, 255);  // Orange-Red
-    } else if (drivingState == "SLOW_TRAFFIC") {
-        action = "DECELERATE";
-        color = cv::Scalar(0, 255, 255);  // Yellow
-    } else if (drivingState == "NORMAL_FOLLOW") {
+void EgoVehicle::getActionAndColor(DrivingState drivingState, float speedChange,
+                                   float egoSpeed, std::string &action,
+                                   cv::Scalar &color) {
+    this->throttleCmd_ = 0.0f;
+    this->brakeCmd_ = 0.0f;
+
+    switch (drivingState) {
+    case DrivingState::emergencyBrake:
+        action = "EmergencyBrake";
+        color = cv::Scalar(0, 0, 255);
+        this->brakeCmd_ = 1.0f;
+        break;
+
+    case DrivingState::closeFollow:
+        action = "BrakeSlow";
+        color = cv::Scalar(0, 100, 255);
+        this->brakeCmd_ = 0.6f;
+        break;
+
+    case DrivingState::slowTraffic:
+        action = "Decelerate";
+        color = cv::Scalar(0, 255, 255);
+        this->brakeCmd_ = 0.3f;
+        break;
+
+    case DrivingState::normalFollow:
         if (std::abs(speedChange) < 1.0f) {
-            action = "MAINTAIN";
-            color = cv::Scalar(0, 255, 0);  // Green
+            action = "Maintain";
+            color = cv::Scalar(0, 255, 0);
+            this->throttleCmd_ = 0.2f;
         } else if (speedChange > 0) {
-            action = "ACCELERATE";
-            color = cv::Scalar(255, 255, 0);  // Cyan
+            action = "Accelerate";
+            color = cv::Scalar(255, 255, 0);
+            this->throttleCmd_ = std::min(0.5f, speedChange * 0.1f);
         } else {
-            action = "DECELERATE";
-            color = cv::Scalar(0, 255, 255);  // Yellow
+            action = "Decelerate";
+            color = cv::Scalar(0, 255, 255);
+            this->brakeCmd_ = std::min(0.4f, std::abs(speedChange) * 0.1f);
         }
-    } else {  // FREE_DRIVE
-        if (speedChange > 2.0f) {
-            action = "ACCELERATE";
-            color = cv::Scalar(255, 255, 0);  // Cyan
+        break;
+
+    case DrivingState::freeDrive: {
+        const float cruiseSpeed = config.speedControl.cruiseSpeedKph;
+        if (egoSpeed >= cruiseSpeed - 0.5f) {
+            action = "CruiseCoast";
+            color = cv::Scalar(0, 200, 0);
+        } else if (speedChange > 2.0f) {
+            action = "Accelerate";
+            color = cv::Scalar(255, 255, 0);
+            this->throttleCmd_ = std::min(0.8f, speedChange * 0.1f);
         } else {
-            action = "CRUISE";
-            color = cv::Scalar(0, 255, 0);  // Green
+            action = "Cruise";
+            color = cv::Scalar(0, 255, 0);
+            this->throttleCmd_ = 0.3f;
         }
+        break;
+    }
     }
 }
 
-float EgoVehicle::updateEgoSpeedSmooth(float currentSpeed, float targetSpeed, int urgencyLevel,
-                                       float dt) {
+float EgoVehicle::updateEgoSpeedSmooth(float currentSpeed, float targetSpeed,
+                                       int urgencyLevel, float dt) {
     float speedDiff = targetSpeed - currentSpeed;
 
     // Determine adjustment rate
@@ -98,8 +130,8 @@ float EgoVehicle::updateEgoSpeedSmooth(float currentSpeed, float targetSpeed, in
     }
 
     // Time-based scaling
-    float timeFactor =
-        std::min(dt / config.speedAdjustment.speedUpdateInterval, 2.0f);  // Cap at 2x
+    float timeFactor = std::min(dt / config.speedAdjustment.speedUpdateInterval,
+                                2.0f); // Cap at 2x
     maxChange *= timeFactor;
 
     float newSpeed;
@@ -119,14 +151,17 @@ float EgoVehicle::updateEgoSpeedSmooth(float currentSpeed, float targetSpeed, in
 }
 
 void EgoVehicle::updateSpeedControl(
-    double timeStart, int targetId, const cv::Rect &bestBox, float &currentEgoSpeed,
-    double &lastSpeedUpdateTime, std::map<int, std::deque<float>> &objectBuffers,
+    double timeStart, int targetId, const cv::Rect &bestBox,
+    float &currentEgoSpeed, double &lastSpeedUpdateTime,
+    std::map<int, std::deque<float>> &objectBuffers,
     std::map<int, float> &prevDistances, std::map<int, double> &prevTimes,
-    std::map<int, float> &smoothedSpeeds, std::deque<float> &speedChangeHistory, float &avgDistance,
-    float &frontSpeed, std::string &action, cv::Scalar &actionColor) {
+    std::map<int, float> &smoothedSpeeds, std::deque<float> &speedChangeHistory,
+    float &avgDistance, float &frontSpeed, std::string &action,
+    cv::Scalar &actionColor) {
     if (targetId != -1 && bestBox.height > 0) {
         float h = bestBox.height;
-        float distance = (config.camera.realObjectWidth * config.camera.focalLength) / h;
+        float distance =
+            (config.camera.realObjectWidth * config.camera.focalLength) / h;
 
         // Initialize if new
         if (objectBuffers.find(targetId) == objectBuffers.end()) {
@@ -139,17 +174,18 @@ void EgoVehicle::updateSpeedControl(
         // Push to buffer
         auto &buf = objectBuffers[targetId];
         buf.push_back(distance);
-        if (buf.size() > 5) buf.pop_front();
+        if (buf.size() > 5)
+            buf.pop_front();
 
         // ✅ Always update avgDistance
         if (buf.size() >= 3) {
             std::deque<float> sortedBuf = buf;
             std::sort(sortedBuf.begin(), sortedBuf.end());
-            avgDistance = sortedBuf[sortedBuf.size() / 2];  // median
+            avgDistance = sortedBuf[sortedBuf.size() / 2]; // median
         } else {
-            avgDistance = std::accumulate(buf.begin(), buf.end(), 0.0f) / buf.size();  // mean
+            avgDistance = std::accumulate(buf.begin(), buf.end(), 0.0f) /
+                          buf.size(); // mean
         }
-
         // ✅ Always update smoothed speed
         double dt = timeStart - prevTimes[targetId];
         if (dt >= config.distanceSpeed.minTimeDelta) {
@@ -158,7 +194,8 @@ void EgoVehicle::updateSpeedControl(
                 float speed = (dDist / dt) * 3.6f;
                 smoothedSpeeds[targetId] =
                     config.distanceSpeed.smoothingFactor * speed +
-                    (1 - config.distanceSpeed.smoothingFactor) * smoothedSpeeds[targetId];
+                    (1 - config.distanceSpeed.smoothingFactor) *
+                        smoothedSpeeds[targetId];
                 prevDistances[targetId] = avgDistance;
                 prevTimes[targetId] = timeStart;
             }
@@ -169,36 +206,41 @@ void EgoVehicle::updateSpeedControl(
         frontSpeed = currentEgoSpeed - relativeSpeed;
 
         // Speed control logic (less frequent)
-        if (timeStart - lastSpeedUpdateTime >= config.speedAdjustment.speedUpdateInterval) {
-            auto [state, urgency] = getDrivingState(avgDistance, frontSpeed, currentEgoSpeed);
-            float targetSpeed =
-                calculateTargetSpeed(avgDistance, frontSpeed, currentEgoSpeed, state, urgency);
+        if (timeStart - lastSpeedUpdateTime >=
+            config.speedAdjustment.speedUpdateInterval) {
+            auto [state, urgency] =
+                getDrivingState(avgDistance, frontSpeed, currentEgoSpeed);
+            float targetSpeed = calculateTargetSpeed(
+                avgDistance, frontSpeed, currentEgoSpeed, state, urgency);
             float oldSpeed = currentEgoSpeed;
 
-            currentEgoSpeed = updateEgoSpeedSmooth(currentEgoSpeed, targetSpeed, urgency,
-                                                   timeStart - lastSpeedUpdateTime);
+            currentEgoSpeed =
+                updateEgoSpeedSmooth(currentEgoSpeed, targetSpeed, urgency,
+                                     timeStart - lastSpeedUpdateTime);
             float speedDelta = currentEgoSpeed - oldSpeed;
 
             speedChangeHistory.push_back(speedDelta);
-            if (speedChangeHistory.size() > 10) speedChangeHistory.pop_front();
+            if (speedChangeHistory.size() > 10)
+                speedChangeHistory.pop_front();
 
             lastSpeedUpdateTime = timeStart;
-            getActionAndColor(state, speedDelta, action, actionColor);
-
-            std::cout << "[+] ID " << targetId << " | Dist: " << std::fixed << std::setprecision(1)
-                      << avgDistance << "m | Front: " << frontSpeed
-                      << " km/h | Ego: " << currentEgoSpeed << " km/h | State: " << state
-                      << " | Action: " << action << std::endl;
+            getActionAndColor(state, speedDelta, currentEgoSpeed, action,
+                              actionColor);
         }
     } else {
+        currentEgoSpeed = 60.0f;
         // No target: cruise mode
-        if (timeStart - lastSpeedUpdateTime >= config.speedAdjustment.speedUpdateInterval) {
-            if (std::abs(currentEgoSpeed - config.speedControl.cruiseSpeedKph) > 1) {
-                currentEgoSpeed += (currentEgoSpeed < config.speedControl.cruiseSpeedKph)
-                                       ? config.speedAdjustment.gentleAdjustment
-                                       : -config.speedAdjustment.gentleAdjustment;
+        if (timeStart - lastSpeedUpdateTime >=
+            config.speedAdjustment.speedUpdateInterval) {
+            if (std::abs(currentEgoSpeed - config.speedControl.cruiseSpeedKph) >
+                1) {
+                currentEgoSpeed +=
+                    (currentEgoSpeed < config.speedControl.cruiseSpeedKph)
+                        ? config.speedAdjustment.gentleAdjustment
+                        : -config.speedAdjustment.gentleAdjustment;
                 currentEgoSpeed =
-                    std::clamp(currentEgoSpeed, 0.0f, config.distanceSpeed.maxValidSpeedKph);
+                    std::clamp(currentEgoSpeed, 0.0f,
+                               config.distanceSpeed.maxValidSpeedKph);
             }
             lastSpeedUpdateTime = timeStart;
         }
@@ -208,5 +250,22 @@ void EgoVehicle::updateSpeedControl(
         avgDistance = -1.0f;
         action = "Deactivated";
         actionColor = cv::Scalar(200, 200, 200);
+    }
+}
+
+std::string toString(DrivingState state) {
+    switch (state) {
+    case DrivingState::emergencyBrake:
+        return "emergencyBrake";
+    case DrivingState::closeFollow:
+        return "closeFollow";
+    case DrivingState::slowTraffic:
+        return "slowTraffic";
+    case DrivingState::normalFollow:
+        return "normalFollow";
+    case DrivingState::freeDrive:
+        return "freeDrive";
+    default:
+        return "unknown";
     }
 }
