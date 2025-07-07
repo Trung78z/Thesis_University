@@ -73,7 +73,8 @@ int main(int argc, char **argv) {
 
     //     // Ensure only one of --video or --images is provided
     //     if (!videoPath.empty() && !imagePath.empty()) {
-    //         std::cerr << "❌ Error: Please provide either --video or --images, "
+    //         std::cerr << "❌ Error: Please provide either --video or --images,
+    //         "
     //                      "not both.\n";
     //         return 1;
     //     }
@@ -159,15 +160,15 @@ int main(int argc, char **argv) {
     //         if (targetId != -1 && avgDistance > 0) {
     //             cv::putText(image,
     //                         "Distance: " +
-    //                             std::to_string(static_cast<int>(avgDistance)) +
-    //                             " m",
+    //                             std::to_string(static_cast<int>(avgDistance))
+    //                             + " m",
     //                         cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 0.8,
     //                         cv::Scalar(0, 255, 0), 2);
     //             cv::putText(
     //                 image,
     //                 "Front Speed: " +
-    //                     std::to_string(static_cast<int>(frontAbsoluteSpeed)) +
-    //                     " km/h",
+    //                     std::to_string(static_cast<int>(frontAbsoluteSpeed))
+    //                     + " km/h",
     //                 cv::Point(20, 80), cv::FONT_HERSHEY_SIMPLEX, 0.8,
     //                 cv::Scalar(255, 0, 0), 2);
 
@@ -188,9 +189,10 @@ int main(int argc, char **argv) {
     //             cv::circle(image, cv::Point(image.cols - 100, 100), 30,
     //                        zoneColor, -1);
     //             cv::putText(
-    //                 image, std::to_string(static_cast<int>(avgDistance)) + "m",
-    //                 cv::Point(image.cols - 120, 110), cv::FONT_HERSHEY_SIMPLEX,
-    //                 0.5, cv::Scalar(255, 255, 255), 1);
+    //                 image, std::to_string(static_cast<int>(avgDistance)) +
+    //                 "m", cv::Point(image.cols - 120, 110),
+    //                 cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255),
+    //                 1);
     //         } else {
     //             cv::putText(image, "Distance: -- m", cv::Point(20, 40),
     //                         cv::FONT_HERSHEY_SIMPLEX, 0.8,
@@ -203,8 +205,8 @@ int main(int argc, char **argv) {
     //         // Always show ego speed and action
     //         cv::putText(image,
     //                     "Ego Speed: " +
-    //                         std::to_string(static_cast<int>(currentEgoSpeed)) +
-    //                         " km/h",
+    //                         std::to_string(static_cast<int>(currentEgoSpeed))
+    //                         + " km/h",
     //                     cv::Point(20, 120), cv::FONT_HERSHEY_SIMPLEX, 0.8,
     //                     cv::Scalar(255, 255, 255), 2);
     //         cv::putText(image, "Action: " + action, cv::Point(20, 160),

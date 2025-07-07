@@ -23,7 +23,8 @@ class EgoVehicle {
 public:
     // Constructor
     EgoVehicle()
-        : throttleCmd(0.0f), brakeCmd(0.0f), currentAcceleration(0.0f), engineForce(0.0f), throttleForce(0.0f), brakeForce(0.0f) {}
+        : throttleCmd(0.0f), brakeCmd(0.0f), currentAcceleration(0.0f),
+          engineForce(0.0f), throttleForce(0.0f), brakeForce(0.0f) {}
 
     void updateSpeedControl(double timeStart, int targetId,
                             const cv::Rect &bestBox, float &currentEgoSpeed,

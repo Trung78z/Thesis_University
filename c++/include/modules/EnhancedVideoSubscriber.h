@@ -15,8 +15,8 @@
 #include <BYTETracker.h>
 #include <Detect.h>
 #include <LaneDetector.h>
-#include <utils.hpp>
 #include <Logger.h>
+#include <utils.hpp>
 class EnhancedVideoSubscriber {
 private:
     std::string model_path_;

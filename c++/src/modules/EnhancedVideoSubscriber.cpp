@@ -7,34 +7,29 @@
 using namespace std;
 using namespace Config;
 EnhancedVideoSubscriber::EnhancedVideoSubscriber(const string &model_path_)
-    :  model_(model_path_, Logger::getInstance()), laneDetector_(),
+    : model_(model_path_, Logger::getInstance()), laneDetector_(),
       tracker_(30.0, 30), frameCount_(0), fps_(30.0), maxSpeed_(-1),
       accSpeed_(config.speedControl.cruiseSpeedKph), noSpeedLimitFrames_(0),
       speedLimitStabilizer_(6),
-      currentEgoSpeed_(config.speedControl.initialSpeedKph),enable_debug_output_(true),
-      lastSpeedUpdateTime_(0), targetId_(-1), classId_(-1), lostTargetCount_(0),
-      framesCurrentTargetOutsideLane_(0) {
+      currentEgoSpeed_(config.speedControl.initialSpeedKph),
+      enable_debug_output_(true), lastSpeedUpdateTime_(0), targetId_(-1),
+      classId_(-1), lostTargetCount_(0), framesCurrentTargetOutsideLane_(0) {
     fpsStartTime_ = chrono::steady_clock::now();
     initializeEnhancedFeatures();
-
-
 }
 
 EnhancedVideoSubscriber::~EnhancedVideoSubscriber() { cv::destroyAllWindows(); }
 
 void EnhancedVideoSubscriber::initializeEnhancedFeatures() {
- 
-  
 
-   processing_times_.clear();
+    processing_times_.clear();
     total_detections_ = 0;
     emergency_stop_ = false;
 
     // Not using ros
-    last_detection_time_ = std::chrono::steady_clock::now().time_since_epoch().count() / 1e9;
-
+    last_detection_time_ =
+        std::chrono::steady_clock::now().time_since_epoch().count() / 1e9;
 }
-
 
 void EnhancedVideoSubscriber::checkSafetyConditions() {
     double current_time = getCurrentTimeInSeconds();
@@ -43,7 +38,7 @@ void EnhancedVideoSubscriber::checkSafetyConditions() {
         if (!emergency_stop_) {
             emergency_stop_ = true;
             printf("Emergency stop activated: No detections for %.1f seconds\n",
-                     current_time - last_detection_time_);
+                   current_time - last_detection_time_);
         }
     } else {
         emergency_stop_ = false;
@@ -55,24 +50,22 @@ void EnhancedVideoSubscriber::checkSafetyConditions() {
     }
 }
 
-void EnhancedVideoSubscriber::imageCallback( const cv::Mat &msg) {
+void EnhancedVideoSubscriber::imageCallback(const cv::Mat &msg) {
 
-        cv::Mat image = msg;
+    cv::Mat image = msg;
 
-        if (image.empty()) {
-            printf("Received empty image\n");
-            return;
-        }
+    if (image.empty()) {
+        printf("Received empty image\n");
+        return;
+    }
 
-        if (!videoRecorder_.isInitialized()) {
-            videoRecorder_.init(image, output_dir_);
-        }
-        // ROS_INFO("Output file in %s", output_dir_.c_str());
+    if (!videoRecorder_.isInitialized()) {
+        videoRecorder_.init(image, output_dir_);
+    }
+    // ROS_INFO("Output file in %s", output_dir_.c_str());
 
-        processEnhancedFrame(image);
-        videoRecorder_.writeFrame(image);
-
-
+    processEnhancedFrame(image);
+    videoRecorder_.writeFrame(image);
 }
 
 void EnhancedVideoSubscriber::processEnhancedFrame(cv::Mat &image) {
@@ -115,18 +108,15 @@ void EnhancedVideoSubscriber::processEnhancedFrame(cv::Mat &image) {
     updateFPS();
 
     hudRenderer_.setEmergencyStop(emergency_stop_);
-    hudRenderer_.render(image, currentEgoSpeed_, accSpeed_, frontAbsoluteSpeed,
-                        avgDistance, accActive, egoVehicle_.getAction(),
-                        actionColor, fps_, targetId_,
-                        egoVehicle_.getEngineForce(),
-                        egoVehicle_.getThrottleForce(),
-                        egoVehicle_.getBrakeForce());
-
-  
+    hudRenderer_.render(
+        image, currentEgoSpeed_, accSpeed_, frontAbsoluteSpeed, avgDistance,
+        accActive, egoVehicle_.getAction(), actionColor, fps_, targetId_,
+        egoVehicle_.getEngineForce(), egoVehicle_.getThrottleForce(),
+        egoVehicle_.getBrakeForce());
 
     if (enable_data_logging_) {
         auto end = chrono::high_resolution_clock::now();
-        double processing_time = chrono::duration<double>(end - start).count();       
+        double processing_time = chrono::duration<double>(end - start).count();
     }
 
     if (enable_debug_output_) {
@@ -289,7 +279,7 @@ void EnhancedVideoSubscriber::updateSpeedLimits(
                 maxSpeed_ = stableSpeed;
                 if (enable_debug_output_) {
                     printf("📸 Stabilized speed limit updated: %d km/h\n",
-                             maxSpeed_);
+                           maxSpeed_);
                 }
             }
         }

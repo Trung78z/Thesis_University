@@ -355,7 +355,9 @@ void EgoVehicle::calculateEngineForces(float egoSpeed) {
     // Engine force = mass * acceleration
     this->engineForce = vehicleMass * this->currentAcceleration;
     // Throttle force = proportional to throttleCmd
-    this->throttleForce = vehicleMass * this->throttleCmd * config.speedAdjustment.maxAcceleration;
+    this->throttleForce = vehicleMass * this->throttleCmd *
+                          config.speedAdjustment.maxAcceleration;
     // Brake force = proportional to brakeCmd
-    this->brakeForce = vehicleMass * this->brakeCmd * (-config.speedAdjustment.maxDeceleration);
+    this->brakeForce = vehicleMass * this->brakeCmd *
+                       (-config.speedAdjustment.maxDeceleration);
 }

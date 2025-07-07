@@ -24,4 +24,4 @@ private:
     Logger &operator=(const Logger &) = delete;
 };
 
-#endif// Logger.h
+#endif // Logger.h
