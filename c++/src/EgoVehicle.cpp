@@ -342,9 +342,6 @@ void EgoVehicle::updateSpeedControl(
 
         frontSpeed = 0.0f;
         avgDistance = -1.0f;
-        this->action = "Deactivated";
-        this->throttleCmd = 0.0;
-        this->brakeCmd = 0.0;
         actionColor = cv::Scalar(200, 200, 200);
     }
 }
