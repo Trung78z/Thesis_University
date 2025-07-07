@@ -4,10 +4,7 @@ int main(int argc, char **argv) {
         // Load configuration from JSON file
         std::cout << "🔧 Loading configuration..." << std::endl;
         Config::loadConfig("config.json");
-        CameraSettings cameraSettings = Config::config.camera;
-        std::cout << cameraSettings.focalLength << "focalLength"
-                  << cameraSettings.realObjectWidth << " @ "
-                  << cameraSettings.fps << " FPS\n";
+
         std::cout << "✅ Configuration loaded successfully.\n";
         STrack::initializeEstimator();
         App app;

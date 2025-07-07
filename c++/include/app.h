@@ -1,41 +1,18 @@
 #ifndef _APP_H
 #define _APP_H
+#include <BYTETracker.h>
+#include <LaneDetector.h>
 
-#include <process.h>
+#include <cxxopts.hpp>
+#include <iostream>
+#include <string>
+#include <utils.hpp>
+#include <vector>
 
-/**
- * @brief Setting up Tensorrt logger
- */
-class Logger : public nvinfer1::ILogger {
-public:
-    static Logger &getInstance() {
-        static Logger instance;
-        return instance;
-    }
+#include <modules/EnhancedVideoSubscriber.h>
 
-    void log(Severity severity, const char *msg) noexcept override {
-        if (severity <= Severity::kWARNING)
-            std::cout << msg << std::endl;
-    }
-
-private:
-    Logger() = default;
-    ~Logger() = default;
-    Logger(const Logger &) = delete;
-    Logger &operator=(const Logger &) = delete;
-};
-
-// Create CLI option parser
-cxxopts::Options createOptions() {
-    cxxopts::Options options(
-        "test", "Run inference on a video or images (choose only one)");
-    options.add_options()("v,video", "Video path",
-                          cxxopts::value<std::string>())(
-        "i,images", "Images path", cxxopts::value<std::string>())(
-        "m,engine", "Engine path",
-        cxxopts::value<std::string>())("h,help", "Print usage");
-    return options;
-}
+#include "Detect.h"
+#include "config.h"
 
 class App {
 public:
@@ -55,23 +32,26 @@ public:
         if (!config.videoPath.empty()) {
             std::cout << "🎞️ Running video inference on: "
                       << config.videoPath << std::endl;
-            if (checkVideo(config.videoPath))
-                return runVideo(config.videoPath, model);
-            else {
-                std::cerr << "❌ Invalid video path.\n";
-                return 1;
-            }
-        }
+            if (checkVideo(config.videoPath)) {
+                EnhancedVideoSubscriber subscriber(config.enginePath);
+                cv::VideoCapture cap(config.videoPath);
 
-        if (!config.imagePath.empty()) {
-            std::vector<std::string> imageList;
-            std::cout << "🖼️ Running image inference in folder: "
-                      << config.imagePath << std::endl;
-            if (checkImages(config.imagePath, imageList))
-                return runImages(imageList, model);
-            else {
-                std::cerr << "❌ No valid images found in: " << config.imagePath
-                          << std::endl;
+                if (!cap.isOpened()) {
+                    cerr << "Error: Cannot open video file!" << endl;
+                    return 0;
+                }
+                while (cap.isOpened()) {
+                    cv::Mat frame;
+                    cap >> frame;
+                    if (frame.empty()) {
+                        std::cout << "End of video stream.\n";
+                        break;
+                    }
+                    subscriber.imageCallback(frame);
+                }
+                return 0;
+            } else {
+                std::cerr << "❌ Invalid video path.\n";
                 return 1;
             }
         }
@@ -119,6 +99,18 @@ private:
         }
 
         return config;
+    }
+
+    // Create CLI option parser
+    cxxopts::Options createOptions() {
+        cxxopts::Options options(
+            "test", "Run inference on a video or images (choose only one)");
+        options.add_options()("v,video", "Video path",
+                              cxxopts::value<std::string>())(
+            "i,images", "Images path", cxxopts::value<std::string>())(
+            "m,engine", "Engine path",
+            cxxopts::value<std::string>())("h,help", "Print usage");
+        return options;
     }
 };
 

@@ -10,6 +10,7 @@
 #include <opencv2/core.hpp>
 #include <string>
 #include <tuple>
+
 enum class DrivingState {
     emergencyBrake,
     closeFollow,
@@ -20,6 +21,10 @@ enum class DrivingState {
 
 class EgoVehicle {
 public:
+    // Constructor
+    EgoVehicle()
+        : throttleCmd(0.0f), brakeCmd(0.0f), currentAcceleration(0.0f), engineForce(0.0f), throttleForce(0.0f), brakeForce(0.0f) {}
+
     void updateSpeedControl(double timeStart, int targetId,
                             const cv::Rect &bestBox, float &currentEgoSpeed,
                             double &lastSpeedUpdateTime,
@@ -29,25 +34,43 @@ public:
                             std::map<int, float> &smoothedSpeeds,
                             std::deque<float> &speedChangeHistory,
                             float &avgDistance, float &frontSpeed,
-                            std::string &action, cv::Scalar &actionColor);
+                            cv::Scalar &actionColor);
 
-    float getThrottleCmd() const { return throttleCmd_; }
-    float getBrakeCmd() const { return brakeCmd_; }
+    float getThrottleCmd() { return this->throttleCmd; }
+    float getBrakeCmd() { return this->brakeCmd; }
+    float getCurrentAcceleration() { return this->currentAcceleration; }
+    std::string getAction() { return this->action; }
+    float getEngineForce() { return this->engineForce; }
+    float getThrottleForce() { return this->throttleForce; }
+    float getBrakeForce() { return this->brakeForce; }
 
 private:
-    float throttleCmd_;
-    float brakeCmd_;
-    float updateEgoSpeedSmooth(float currentSpeed, float targetSpeed,
-                               int urgencyLevel, float dt);
+    std::string action;
+    float throttleCmd;
+    float brakeCmd;
+    float currentAcceleration; // Current acceleration in m/s²
+    float engineForce;
+    float throttleForce;
+    float brakeForce;
 
-    void getActionAndColor(DrivingState drivingState, float speedChange,
-                           float egoSpeed, std::string &action,
-                           cv::Scalar &color);
+    // Modified methods for acceleration-based control
+    float updateEgoSpeedWithAcceleration(float currentSpeed,
+                                         float targetAcceleration,
+                                         int urgencyLevel, float dt);
+    void getActionAndColor(DrivingState drivingState, float acceleration,
+                           float egoSpeed, cv::Scalar &color);
 
+    // New method for calculating target acceleration
+    float calculateTargetAcceleration(float distance, float frontSpeed,
+                                      float egoSpeed, DrivingState drivingState,
+                                      int urgency);
+
+    // Existing methods
     std::pair<DrivingState, int>
     getDrivingState(float distance, float frontSpeed, float egoSpeed);
-    float calculateTargetSpeed(float distance, float frontSpeed, float egoSpeed,
-                               DrivingState drivingState, int urgency);
+
+    // New method for calculating engine, throttle, and brake forces
+    void calculateEngineForces(float egoSpeed);
 };
 
 #endif // _EGO_VEHICLE_H

@@ -18,7 +18,7 @@ find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 # Gather all cpp/cu files EXCEPT main.cpp and test.cpp
-file(GLOB_RECURSE ALL_SOURCES src/*.cpp src/*.cu)
+file(GLOB_RECURSE ALL_SOURCES src/*.cpp src/modules/*.cpp src/*.cu)
 
 # Define entry points
 set(MAIN_ENTRY src/main.cpp)
@@ -50,10 +50,11 @@ add_library(bytetrack SHARED ${SRCS01})
 target_link_libraries(bytetrack cudart nvinfer ${OpenCV_LIBS})
 
 # Static library with CUDA support
-file(GLOB LIB_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/include/*.h"
+file(GLOB LIB_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/include/*.h" 
      "${CMAKE_SOURCE_DIR}/include/*.hpp")
 
-include_directories(${CMAKE_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
+include_directories(include ${CMAKE_SOURCE_DIR}/include
+                    ${CMAKE_CURRENT_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
 
 # Main executable
 add_executable(${PROJECT_NAME} ${MAIN_ENTRY} ${SHARED_SOURCES})
