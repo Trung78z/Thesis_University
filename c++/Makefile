@@ -1,8 +1,8 @@
 # Variables
 TARGET           := detection
 TEST_TARGET		 := test
-ENGINE           := models/30-6.engine
-VIDEO_INPUT      := videos/test_video_640x640.mp4
+ENGINE           := models/30-6-new.engine
+VIDEO_INPUT      := videos/test_video.mp4
 BUILD_DIR        := build
 BIN_DIR          := bin
 CMAKE_BUILD_TYPE ?= Release

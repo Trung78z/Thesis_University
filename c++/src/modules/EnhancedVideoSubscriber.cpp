@@ -60,7 +60,7 @@ void EnhancedVideoSubscriber::imageCallback(const cv::Mat &msg) {
     }
 
     if (!videoRecorder_.isInitialized()) {
-        videoRecorder_.init(image, output_dir_);
+        videoRecorder_.init(image, "/home/trung/Desktop");
     }
     // ROS_INFO("Output file in %s", output_dir_.c_str());
 
